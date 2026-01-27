@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Activate Your SmartLocket</title>
+    <link rel="stylesheet" href="activate-style.css">
+</head>
+<body>
+    <div class="activation-container">
+        <div class="activation-card">
+            <div class="activation-header">
+                <h1>Activate Your SmartLocket</h1>
+                <div class="memory-id" id="memoryIdDisplay">Loading...</div>
+                <p>Complete the steps below to activate your personal memory gallery</p>
+            </div>
+
+            <div class="step-indicator">
+                <div class="step active" id="step1">
+                    <div class="step-number">1</div>
+                    <div class="step-label">Email</div>
+                </div>
+                <div class="step" id="step2">
+                    <div class="step-number">2</div>
+                    <div class="step-label">Verify</div>
+                </div>
+                <div class="step" id="step3">
+                    <div class="step-number">3</div>
+                    <div class="step-label">Passcode</div>
+                </div>
+            </div>
+
+            <div class="error-message" id="errorMessage"></div>
+
+            <!-- Step 1: Email Entry -->
+            <div class="form-section active" id="emailSection">
+                <div class="info-box">
+                    <p>Enter your email to secure your SmartLocket. We'll send you a verification code.</p>
+                </div>
+                
+                <form id="emailForm">
+                    <div class="form-group">
+                        <label for="email">Email Address</label>
+                        <input type="email" id="email" placeholder="your.email@example.com" required>
+                        <small>This will be used for account recovery and important notifications</small>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Send Verification Code</button>
+                </form>
+            </div>
+
+            <!-- Step 2: Verification Code -->
+            <div class="form-section" id="verificationSection">
+                <div class="info-box">
+                    <p>Enter the 6-digit code sent to <strong id="emailDisplay"></strong></p>
+                </div>
+                
+                <form id="verificationForm">
+                    <div class="form-group">
+                        <label>Verification Code</label>
+                        <div class="verification-code-input">
+                            <input type="text" maxlength="1" class="code-digit" data-index="0">
+                            <input type="text" maxlength="1" class="code-digit" data-index="1">
+                            <input type="text" maxlength="1" class="code-digit" data-index="2">
+                            <input type="text" maxlength="1" class="code-digit" data-index="3">
+                            <input type="text" maxlength="1" class="code-digit" data-index="4">
+                            <input type="text" maxlength="1" class="code-digit" data-index="5">
+                        </div>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Verify Code</button>
+                    <div class="resend-code">
+                        <button type="button" id="resendBtn" onclick="resendCode()">Resend Code</button>
+                        <span id="resendTimer"></span>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Step 3: Create Passcode -->
+            <div class="form-section" id="passcodeSection">
+                <div class="info-box">
+                    <p>Create your personal passcode to edit your SmartLocket</p>
+                </div>
+                
+                <form id="passcodeForm">
+                    <div class="form-group">
+                        <label for="passcode">Create Passcode</label>
+                        <input type="password" id="passcode" placeholder="Enter your passcode" required maxlength="6">
+                        <small>At least 6 characters. You'll need this to edit your gallery.</small>
+                    </div>
+                    <div class="form-group">
+                        <label for="confirmPasscode">Confirm Passcode</label>
+                        <input type="password" id="confirmPasscode" placeholder="Confirm your passcode" required maxlength="6">
+                    </div>
+                    <button type="submit" class="btn btn-primary">Complete Activation</button>
+                </form>
+            </div>
+
+            <!-- Success Message -->
+            <div class="form-section" id="successSection">
+                <div class="success-message">
+                    <div class="success-icon">✓</div>
+                    <h2>Activation Complete!</h2>
+                    <p>Your SmartLocket is now active and ready to use.</p>
+                    <p id="redirectMessage" style="color: #667eea; margin-top: 10px;">Redirecting to your gallery in <span id="countdown">2</span> seconds...</p>
+                    <button class="btn btn-primary" onclick="goToGallery()">Go Now</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="/src/config.js"></script>
+    <script src="/src/script.js"></script>
+    <script>
+        // API Base URL Configuration
+        const API_BASE_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+            ? 'http://localhost:3000'
+            : 'https://your-backend-domain.com'; // Update this when deploying
+
+        // Get Memory ID from URL
+        const urlParams = new URLSearchParams(window.location.search);
+        const memoryId = urlParams.get('id') || window.location.pathname.split('/').filter(p => p && p !== 'activate.html').pop();
+        let userEmail = '';
+        let verificationToken = '';
+
+        console.log('Memory ID extracted:', memoryId);
+        console.log('Full URL:', window.location.href);
+        console.log('Query params:', Object.fromEntries(urlParams));
+        
+        document.getElementById('memoryIdDisplay').textContent = memoryId || 'INVALID';
+
+        // Email Form Handler
+        document.getElementById('emailForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const email = document.getElementById('email').value;
+            userEmail = email;
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/api/activation/send-code`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ memoryId, email })
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    document.getElementById('emailDisplay').textContent = email;
+                    goToStep(2);
+                    startResendTimer();
+                } else {
+                    showError(data.message || 'Failed to send verification code');
+                }
+            } catch (error) {
+                showError('Network error. Please try again.');
+            }
+        });
+
+        // Verification Code Handler
+        const codeInputs = document.querySelectorAll('.code-digit');
+        codeInputs.forEach((input, index) => {
+            input.addEventListener('input', (e) => {
+                if (e.target.value.length === 1 && index < codeInputs.length - 1) {
+                    codeInputs[index + 1].focus();
+                }
+            });
+
+            input.addEventListener('keydown', (e) => {
+                if (e.key === 'Backspace' && e.target.value === '' && index > 0) {
+                    codeInputs[index - 1].focus();
+                }
+            });
+        });
+
+        document.getElementById('verificationForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const code = Array.from(codeInputs).map(input => input.value).join('');
+
+            if (code.length !== 6) {
+                showError('Please enter all 6 digits');
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/api/activation/verify-code`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ memoryId, email: userEmail, code })
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    verificationToken = data.token;
+                    goToStep(3);
+                } else {
+                    showError(data.message || 'Invalid verification code');
+                    codeInputs.forEach(input => input.value = '');
+                    codeInputs[0].focus();
+                }
+            } catch (error) {
+                showError('Network error. Please try again.');
+            }
+        });
+
+        // Passcode Form Handler
+        document.getElementById('passcodeForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const passcode = document.getElementById('passcode').value;
+            const confirmPasscode = document.getElementById('confirmPasscode').value;
+
+            if (passcode !== confirmPasscode) {
+                showError('Passcodes do not match');
+                return;
+            }
+
+            if (passcode.length < 6) {
+                showError('Passcode must be at least 6 characters');
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/api/activation/complete`, {
+                    method: 'POST',
+                    headers: { 
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${verificationToken}`
+                    },
+                    body: JSON.stringify({ memoryId, email: userEmail, passcode })
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    goToStep(4);
+                    // Store session token
+                    sessionStorage.setItem('editToken', data.sessionToken);
+                    
+                    // Countdown timer
+                    let countdown = 2;
+                    const countdownElement = document.getElementById('countdown');
+                    const countdownInterval = setInterval(() => {
+                        countdown--;
+                        if (countdownElement) {
+                            countdownElement.textContent = countdown;
+                        }
+                        if (countdown <= 0) {
+                            clearInterval(countdownInterval);
+                            window.location.href = `/gallery.html?id=${memoryId}`;
+                        }
+                    }, 1000);
+                } else {
+                    showError(data.message || 'Failed to complete activation');
+                }
+            } catch (error) {
+                showError('Network error. Please try again.');
+            }
+        });
+
+        function goToStep(stepNumber) {
+            // Update step indicators
+            document.querySelectorAll('.step').forEach((step, index) => {
+                step.classList.remove('active', 'completed');
+                if (index + 1 < stepNumber) {
+                    step.classList.add('completed');
+                } else if (index + 1 === stepNumber) {
+                    step.classList.add('active');
+                }
+            });
+
+            // Show corresponding form section
+            document.querySelectorAll('.form-section').forEach(section => {
+                section.classList.remove('active');
+            });
+
+            const sections = ['emailSection', 'verificationSection', 'passcodeSection', 'successSection'];
+            document.getElementById(sections[stepNumber - 1]).classList.add('active');
+
+            // Clear error
+            hideError();
+        }
+
+        function showError(message) {
+            const errorEl = document.getElementById('errorMessage');
+            errorEl.textContent = message;
+            errorEl.classList.add('show');
+        }
+
+        function hideError() {
+            document.getElementById('errorMessage').classList.remove('show');
+        }
+
+        let resendTimer = 60;
+        let resendInterval;
+
+        function startResendTimer() {
+            const resendBtn = document.getElementById('resendBtn');
+            const timerEl = document.getElementById('resendTimer');
+            resendBtn.disabled = true;
+            resendTimer = 60;
+
+            resendInterval = setInterval(() => {
+                resendTimer--;
+                timerEl.textContent = `(${resendTimer}s)`;
+
+                if (resendTimer === 0) {
+                    clearInterval(resendInterval);
+                    resendBtn.disabled = false;
+                    timerEl.textContent = '';
+                }
+            }, 1000);
+        }
+
+        async function resendCode() {
+            try {
+                const response = await fetch(`${API_BASE_URL}/api/activation/resend-code`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ memoryId, email: userEmail })
+                });
+
+                if (response.ok) {
+                    showError('New code sent! Check your email.');
+                    startResendTimer();
+                } else {
+                    showError('Failed to resend code. Please try again.');
+                }
+            } catch (error) {
+                showError('Network error. Please try again.');
+            }
+        }
+
+        function goToGallery() {
+            window.location.href = `/NFCchain.html?id=${memoryId}`;
+        }
+
+        // Check if already activated
+        async function checkActivationStatus() {
+            try {
+                const response = await fetch(`${API_BASE_URL}/api/memory/${memoryId}/status`);
+                
+                if (!response.ok) {
+                    // 404 means not found - that's okay, user needs to activate
+                    if (response.status === 404) {
+                        console.log('Memory ID not found in database - proceed with activation');
+                        return;
+                    }
+                    throw new Error(`HTTP ${response.status}`);
+                }
+                
+                const data = await response.json();
+
+                if (data.activated) {
+                    // Already activated, redirect to gallery
+                    window.location.href = `/NFCchain.html?id=${memoryId}`;
+                }
+            } catch (error) {
+                console.error('Error checking activation status:', error);
+                // Don't block activation flow if status check fails
+            }
+        }
+
+        // Check on page load
+        checkActivationStatus();
+    </script>
+</body>
+</html>

@@ -1,0 +1,405 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SmartLocket Admin Panel</title>
+    <link rel="stylesheet" href="admin-style.css">
+</head>
+<body>
+    <nav class="admin-nav">
+        <div class="admin-logo">
+            <h1>SmartLocket Admin</h1>
+        </div>
+        <ul class="admin-menu">
+            <li><a href="#dashboard">Dashboard</a></li>
+            <li><a href="#generate">Generate Batch</a></li>
+            <li><a href="#inventory">Inventory</a></li>
+            <!--<li><a href="#nfc-writing">NFC Writing</a></li>-->
+        </ul>
+        <button class="logout-btn" onclick="logout()">Logout</button>
+    </nav>
+
+    <main class="admin-main">
+        <!-- Dashboard Section -->
+        <section id="dashboard" class="admin-section active">
+            <div class="section-header">
+                <h2>Dashboard</h2>
+                <p class="subtitle">Overview of all SmartLockets</p>
+            </div>
+            
+            <div class="stats-grid">
+                <div class="stat-card total">
+                    <div class="stat-content">
+                        <h3>Total SmartLockets</h3>
+                        <p class="stat-number" id="totalChains">0</p>
+                        <span class="stat-label">All time</span>
+                    </div>
+                </div>
+                
+                <div class="stat-card unused">
+                    <div class="stat-content">
+                        <h3>Unused</h3>
+                        <p class="stat-number" id="unusedChains">0</p>
+                        <span class="stat-label">Ready to program</span>
+                    </div>
+                </div>
+                
+                <div class="stat-card written">
+                    <div class="stat-content">
+                        <h3>Written to NFC</h3>
+                        <p class="stat-number" id="writtenChains">0</p>
+                        <span class="stat-label">Programmed tags</span>
+                    </div>
+                </div>
+                
+                <div class="stat-card activated">
+                    <div class="stat-content">
+                        <h3>Activated</h3>
+                        <p class="stat-number" id="activatedChains">0</p>
+                        <span class="stat-label">In use</span>
+                    </div>
+                </div>
+                
+                <div class="stat-card premium">
+                    <div class="stat-content">
+                        <h3>Premium</h3>
+                        <p class="stat-number" id="premiumChains">0</p>
+                        <span class="stat-label">Premium accounts</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="quick-actions">
+                <h3>Quick Actions</h3>
+                <div class="action-buttons">
+                    <button class="action-btn primary" onclick="navigateTo('generate')">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                            <line x1="12" y1="5" x2="12" y2="19" stroke="currentColor" stroke-width="2"/>
+                            <line x1="5" y1="12" x2="19" y2="12" stroke="currentColor" stroke-width="2"/>
+                        </svg>
+                        Generate New Batch
+                    </button>
+                    <button class="action-btn secondary" onclick="navigateTo('nfc-writing')">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                            <path d="M12 2L2 7l10 5 10-5-10-5z" stroke="currentColor" stroke-width="2"/>
+                        </svg>
+                        NFC Writing Mode
+                    </button>
+                    <button class="action-btn secondary" onclick="navigateTo('inventory')">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                            <path d="M4 7h16M4 12h16M4 17h10" stroke="currentColor" stroke-width="2"/>
+                        </svg>
+                        View Inventory
+                    </button>
+                </div>
+            </div>
+
+            <div class="recent-activity">
+                <h3>Recent Activity</h3>
+                <div class="activity-list" id="recentActivity">
+                    <!-- Populated by JavaScript -->
+                </div>
+            </div>
+        </section>
+
+        <!-- Generate Batch Section -->
+        <section id="generate" class="admin-section">
+            <div class="section-header">
+                <h2>Generate Batch</h2>
+                <p class="subtitle">Create multiple SmartLockets at once</p>
+            </div>
+
+            <div class="generate-container">
+                <form id="generateForm" class="generate-form">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="batchSize">
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+                                    <path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z" stroke="currentColor" stroke-width="2"/>
+                                </svg>
+                                Number of Units
+                            </label>
+                            <select id="batchSize" required>
+                                <option value="">Select quantity</option>
+                                <option value="10">10 Units</option>
+                                <option value="50">50 Units</option>
+                                <option value="100">100 Units</option>
+                                <option value="500">500 Units</option>
+                                <option value="1000">1000 Units</option>
+                                <option value="custom">Custom Amount</option>
+                            </select>
+                            <input type="number" id="customBatchSize" placeholder="Enter custom amount" style="display: none;" min="1" max="10000">
+                        </div>
+
+                        <div class="form-group">
+                            <label for="photoLimit">
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+                                    <rect x="3" y="3" width="18" height="18" rx="2" stroke="currentColor" stroke-width="2"/>
+                                    <circle cx="8.5" cy="8.5" r="1.5" stroke="currentColor" stroke-width="2"/>
+                                    <path d="M21 15l-5-5L5 21" stroke="currentColor" stroke-width="2"/>
+                                </svg>
+                                Photo Limit
+                            </label>
+                            <select id="photoLimit" required>
+                                <option value="5">5 Photos (Standard)</option>
+                                <option value="100">100 Photos (Premium)</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="batchPrefix">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+                                <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" stroke="currentColor" stroke-width="2"/>
+                            </svg>
+                            Batch Prefix (Optional)
+                        </label>
+                        <input type="text" id="batchPrefix" placeholder="e.g., MC, VIP, etc." maxlength="3">
+                        <small>Leave empty for random IDs</small>
+                    </div>
+
+                    <div class="form-group checkbox-group">
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="isPremium">
+                            <span>⭐ Mark as Premium Batch</span>
+                        </label>
+                        <small>Premium accounts get extra features and benefits</small>
+                    </div>
+
+                    <div class="form-actions">
+                        <button type="button" class="btn-secondary" onclick="navigateTo('dashboard')">Cancel</button>
+                        <button type="submit" class="btn-primary">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                                <path d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" stroke="currentColor" stroke-width="2"/>
+                                <path d="M9 12l2 2 4-4" stroke="currentColor" stroke-width="2"/>
+                            </svg>
+                            Generate Batch
+                        </button>
+                    </div>
+                </form>
+
+                <div id="generateResult" class="generate-result" style="display: none;">
+                    <div class="result-header">
+                        <h3>✅ Batch Generated Successfully!</h3>
+                        <p>Your MemoryChains have been created</p>
+                    </div>
+                    <div class="result-stats">
+                        <div class="result-stat">
+                            <span class="stat-label">Total Generated:</span>
+                            <span class="stat-value" id="generatedCount">0</span>
+                        </div>
+                        <div class="result-stat">
+                            <span class="stat-label">Photo Limit:</span>
+                            <span class="stat-value" id="generatedPhotoLimit">0</span>
+                        </div>
+                        <div class="result-stat">
+                            <span class="stat-label">Premium:</span>
+                            <span class="stat-value" id="generatedPremium">No</span>
+                        </div>
+                    </div>
+                    <div class="result-actions">
+                        <button class="btn-primary" onclick="downloadCSV()">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                                <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3" stroke="currentColor" stroke-width="2"/>
+                            </svg>
+                            Download CSV
+                        </button>
+                        <button class="btn-secondary" onclick="viewBatchDetails()">View Details</button>
+                    </div>
+                    <div class="warning-box">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                            <path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" stroke="currentColor" stroke-width="2"/>
+                            <line x1="12" y1="9" x2="12" y2="13" stroke="currentColor" stroke-width="2"/>
+                            <line x1="12" y1="17" x2="12.01" y2="17" stroke="currentColor" stroke-width="2"/>
+                        </svg>
+                        <div>
+                            <strong>Important:</strong> The CSV file contains sensitive information. 
+                            Store it securely and delete after programming NFC tags.
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Inventory Section -->
+        <section id="inventory" class="admin-section">
+            <div class="section-header">
+                <h2>Inventory Management</h2>
+                <p class="subtitle">Track all SmartLockets</p>
+            </div>
+
+            <div class="inventory-controls">
+                <div class="search-box">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                        <circle cx="11" cy="11" r="8" stroke="currentColor" stroke-width="2"/>
+                        <path d="M21 21l-4.35-4.35" stroke="currentColor" stroke-width="2"/>
+                    </svg>
+                    <input type="text" id="searchMemoryId" placeholder="Search by Memory ID...">
+                </div>
+
+                <div class="filter-group">
+                    <label>Status:</label>
+                    <select id="filterStatus">
+                        <option value="all">All Status</option>
+                        <option value="unused">Unused</option>
+                        <option value="written">Written</option>
+                        <option value="shipped">Shipped</option>
+                        <option value="activated">Activated</option>
+                    </select>
+                </div>
+
+                <div class="filter-group">
+                    <label>Type:</label>
+                    <select id="filterPremium">
+                        <option value="all">All Types</option>
+                        <option value="true">Premium Only</option>
+                        <option value="false">Standard Only</option>
+                    </select>
+                </div>
+
+                <button class="btn-secondary" onclick="exportInventory()">
+                    Export List
+                </button>
+            </div>
+
+            <div class="inventory-table-container">
+                <table class="inventory-table" id="inventoryTable">
+                    <thead>
+                        <tr>
+                            <th>Memory ID</th>
+                            <th>Status</th>
+                            <th>Type</th>
+                            <th>Photo Limit</th>
+                            <th>Order ID</th>
+                            <th>Email</th>
+                            <th>Created</th>
+                            <th>Activated</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="inventoryTableBody">
+                        <!-- Populated by JavaScript -->
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="pagination" id="inventoryPagination">
+                <!-- Populated by JavaScript -->
+            </div>
+        </section>
+
+        <!-- NFC Writing Section 
+        <section id="nfc-writing" class="admin-section">
+            <div class="section-header">
+                <h2>NFC Writing Mode</h2>
+                <p class="subtitle">Program NFC tags efficiently</p>
+            </div>
+
+            <div class="nfc-writing-container">
+                <div class="nfc-current-card">
+                    <h3>Current SmartLocket to Write</h3>
+                    <div class="nfc-display" id="nfcDisplay">
+                        <div class="memory-id-display" id="currentMemoryId">
+                            No SmartLocket selected
+                        </div>
+                        <div class="url-display" id="currentUrl">
+                            Click "Next Unused" to start
+                        </div>
+                    </div>
+
+                    <div class="nfc-info-grid">
+                        <div class="info-item">
+                            <span class="label">Photo Limit:</span>
+                            <span class="value" id="nfcPhotoLimit">-</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="label">Premium:</span>
+                            <span class="value" id="nfcPremium">-</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="label">Created:</span>
+                            <span class="value" id="nfcCreated">-</span>
+                        </div>
+                    </div>
+
+                    <div class="nfc-actions">
+                        <button class="btn-primary" onclick="loadNextUnused()">
+                            Next Unused SmartLocket
+                        </button>
+                        <button class="btn-secondary" onclick="copyToClipboard()">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                                <rect x="9" y="9" width="13" height="13" rx="2" stroke="currentColor" stroke-width="2"/>
+                                <path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1" stroke="currentColor" stroke-width="2"/>
+                            </svg>
+                            Copy URL
+                        </button>
+                    </div>
+                </div>
+
+                <div class="nfc-workflow">
+                    <h3>Writing Workflow</h3>
+                    <ol class="workflow-steps">
+                        <li class="step">
+                            <div class="step-number">1</div>
+                            <div class="step-content">
+                                <h4>Load Next SmartLocket</h4>
+                                <p>Click "Next Unused" to load the next unprogrammed tag</p>
+                            </div>
+                        </li>
+                        <li class="step">
+                            <div class="step-number">2</div>
+                            <div class="step-content">
+                                <h4>Write to NFC Tag</h4>
+                                <p>Use your NFC writer to program the displayed URL</p>
+                            </div>
+                        </li>
+                        <li class="step">
+                            <div class="step-number">3</div>
+                            <div class="step-content">
+                                <h4>Test with Phone</h4>
+                                <p>Tap the tag with your phone to verify the URL</p>
+                            </div>
+                        </li>
+                        <li class="step">
+                            <div class="step-number">4</div>
+                            <div class="step-content">
+                                <h4>Lock NFC Tag</h4>
+                                <p>Make the tag read-only to prevent tampering</p>
+                            </div>
+                        </li>
+                        <li class="step">
+                            <div class="step-number">5</div>
+                            <div class="step-content">
+                                <h4>Mark as Written</h4>
+                                <p>Click below to update the status in the system</p>
+                            </div>
+                        </li>
+                    </ol>
+
+                    <button class="btn-success" onclick="markAsWritten()" id="markWrittenBtn" disabled>
+                        ✓ Mark as Written
+                    </button>
+                </div>
+
+                <div class="nfc-stats">
+                    <h3>Today's Progress</h3>
+                    <div class="progress-stats">
+                        <div class="progress-item">
+                            <span class="progress-label">Written Today:</span>
+                            <span class="progress-value" id="writtenToday">0</span>
+                        </div>
+                        <div class="progress-item">
+                            <span class="progress-label">Remaining Unused:</span>
+                            <span class="progress-value" id="remainingUnused">0</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+        -->
+    </main>
+
+    <script src="admin-script.js"></script>
+</body>
+</html>
