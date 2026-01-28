@@ -2902,7 +2902,16 @@ async function verifyPasscodeAndEnterEditMode() {
     if (result.valid) {
       if (error) error.style.display = "none";
       closePasscodeModal();
-      enterEditMode();
+      // Handle Spotify actions if needed
+      if (window.pendingSpotifyAction === 'open') {
+        window.pendingSpotifyAction = null;
+        openSpotifyModal();
+      } else if (window.pendingSpotifyAction === 'clear') {
+        window.pendingSpotifyAction = null;
+        clearSpotifyTrack();
+      } else {
+        enterEditMode();
+      }
     } else {
       if (error) {
         error.textContent = "Incorrect passcode. Please try again.";
