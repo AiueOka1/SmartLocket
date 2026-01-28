@@ -2864,6 +2864,68 @@ function saveHeaderTitle() {
     showNotification('Gallery title updated!', 'success');
 }
 
+function onEditClick() {
+  openPasscodeModal();
+}
+
+async function verifyPasscodeAndEnterEditMode() {
+  const input = document.getElementById('passcodeInput');
+  const error = document.getElementById('passcodeError');
+  const passcode = input?.value?.trim();
+
+  // Validate input
+  if (!passcode || passcode.length !== 6) {
+    if (error) {
+      error.textContent = "Please enter a 6-digit passcode.";
+      error.style.display = "block";
+    }
+    return;
+  }
+
+  // Show loading state
+  const unlockBtn = document.querySelector('#passcodeModal .image-save-btn');
+  const originalText = unlockBtn?.innerHTML;
+  if (unlockBtn) {
+    unlockBtn.innerHTML = "Verifying...";
+    unlockBtn.disabled = true;
+  }
+
+  try {
+    // Call backend to verify passcode
+    const response = await fetch(`${API_BASE_URL}/verify-passcode`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ memoryId: MEMORY_ID, passcode })
+    });
+    const result = await response.json();
+
+    if (result.valid) {
+      if (error) error.style.display = "none";
+      closePasscodeModal();
+      enterEditMode();
+    } else {
+      if (error) {
+        error.textContent = "Incorrect passcode. Please try again.";
+        error.style.display = "block";
+      }
+    }
+  } catch (err) {
+    if (error) {
+      error.textContent = "Error verifying passcode. Please try again.";
+      error.style.display = "block";
+    }
+  } finally {
+    if (unlockBtn) {
+      unlockBtn.innerHTML = originalText || "Unlock";
+      unlockBtn.disabled = false;
+    }
+  }
+}
+
+// Make globally available
+window.onEditClick = onEditClick;
+window.verifyPasscodeAndEnterEditMode = verifyPasscodeAndEnterEditMode;
+
 // Image Edit Modal Functions
 function openImageEditModal(index) {
     console.log(`🔍 openImageEditModal called with index: ${index}, memories.length: ${memories.length}`);
@@ -3064,7 +3126,20 @@ function showSpotifyPreview(embedUrl, type) {
             allow="encrypted-media"
             style="border-radius: 8px;">
         </iframe>
-    `;
+    `;async function verifyPasscodeAndEnterEditMode() {
+  // ...existing passcode verification logic...
+  const isValid = await verifyPasscode(inputPasscode, STORED_PASSCODE_HASH);
+  if (isValid) {
+    closePasscodeModal();
+    enterEditMode(); // Only enable edit mode after verification
+  } else {
+    showNotification("Incorrect passcode", "error");
+  }
+}
+
+// Make globally available
+window.onEditClick = onEditClick;
+window.verifyPasscodeAndEnterEditMode = verifyPasscodeAndEnterEditMode;
     
     previewSection.style.display = 'block';
 }

@@ -59,12 +59,14 @@ const allowedOrigins = [
     'http://localhost:8080',
     'http://127.0.0.1:3000',
     'https://aiueoka1.github.io',
+    "https://127.0.0.1:5500",
+    "http://localhost:5500",
     process.env.FRONTEND_URL, // Add your frontend URL as environment variable
 ].filter(Boolean); // Remove undefined values
 
 // Improved CORS: allow only whitelisted domains
 app.use(cors({
-    origin: function(origin, callback) {
+    origin: function (origin, callback) {
         if (!origin) return callback(null, true); // allow non-browser requests
         if (allowedOrigins.indexOf(origin) !== -1) {
             return callback(null, true);
@@ -1361,11 +1363,11 @@ app.get(['/*.html', '/'], (req, res, next) => {
 const PORT = process.env.PORT || 3000;
 // The following block is ONLY for local/server development. It must be disabled for Firebase Functions deployment.
 // Commented out to prevent EADDRINUSE error in Firebase Functions:
-// app.listen(PORT, () => {
-//   console.log(`✅ Server running on port ${PORT}`);
-//   console.log(`🔥 Firebase connected`);
-//   console.log(`📊 Collection: nfcChains`);
-//   console.log(`🗄️ Storage bucket: ${bucket.name}`);
-// });
+app.listen(PORT, () => {
+    console.log(`✅ Server running on port ${PORT}`);
+    console.log(`🔥 Firebase connected`);
+    console.log(`📊 Collection: nfcChains`);
+    console.log(`🗄️ Storage bucket: ${bucket.name}`);
+});
 
 module.exports = app;
