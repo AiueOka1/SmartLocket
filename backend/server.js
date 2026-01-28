@@ -1344,11 +1344,13 @@ app.get(['/*.html', '/'], (req, res, next) => {
 });
 
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-    console.log(`✅ Server running on port ${PORT}`);
-    console.log(`🔥 Firebase connected`);
-    console.log(`📊 Collection: nfcChains`);
-    console.log(`🗄️ Storage bucket: ${bucket.name}`);
-});
+// The following block is ONLY for local/server development. It must be disabled for Firebase Functions deployment.
+// Commented out to prevent EADDRINUSE error in Firebase Functions:
+// app.listen(PORT, () => {
+//     console.log(`✅ Server running on port ${PORT}`);
+//     console.log(`🔥 Firebase connected`);
+//     console.log(`📊 Collection: nfcChains`);
+//     console.log(`🗄️ Storage bucket: ${bucket.name}`);
+// });
 
 module.exports = app;

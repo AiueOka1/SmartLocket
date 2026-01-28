@@ -43,7 +43,7 @@ function getImageUrl(filename) {
 // API Base URL
 const API_BASE_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
     ? 'http://localhost:3000'
-    : 'https://your-backend-domain.com'; // Update this when deploying
+    : 'https://us-central1-nfcchain.cloudfunctions.net/api'; // Update this when deploying
 
 // Get Memory ID from URL
 function getMemoryIdFromURL() {
