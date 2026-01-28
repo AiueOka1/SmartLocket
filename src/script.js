@@ -41,9 +41,12 @@ function getImageUrl(filename) {
 // ========================================
 
 // API Base URL
+// Local: talks directly to Express on port 3000 (which serves /api/*)
+// Production: talks to the deployed Cloud Function named "api"
+// We keep `/api` in the base URL, and use route paths *without* an extra `/api` prefix.
 const API_BASE_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
     ? 'http://localhost:3000'
-    : 'https://us-central1-nfcchain.cloudfunctions.net/api'; // Update this when deploying
+    : 'https://us-central1-nfcchain.cloudfunctions.net/api';
 
 // Get Memory ID from URL
 function getMemoryIdFromURL() {
@@ -67,7 +70,8 @@ async function loadGalleryData() {
         return null;
     }
     try {
-        const response = await fetch(`${API_BASE_URL}/api/memory/${MEMORY_ID}`);
+        // FIX: Remove extra /api from fetch URL
+        const response = await fetch(`${API_BASE_URL}/memory/${MEMORY_ID}`);
         if (!response.ok) {
             if (response.status === 404) {
                 // NFCchain not found - redirect to activation
@@ -159,7 +163,7 @@ async function saveGalleryData(galleryData) {
         return;
     }
     try {
-        const response = await fetch(`${API_BASE_URL}/api/memory/${MEMORY_ID}`, {
+        const response = await fetch(`${API_BASE_URL}/memory/${MEMORY_ID}`, {
             method: 'PUT',
             headers: {
                 'Content-Type': 'application/json'
@@ -1112,7 +1116,7 @@ async function saveAllChangesToBackend() {
         });
 
         // Send to backend
-        const response = await fetch(`${API_BASE_URL}/api/memory/${MEMORY_ID}`, {
+        const response = await fetch(`${API_BASE_URL}/memory/${MEMORY_ID}`, {
             method: 'PUT',
             headers: {
                 'Content-Type': 'application/json'
@@ -1201,7 +1205,7 @@ async function verifyPasscode(inputPasscode, storedHash) {
     // For bcrypt hashes (starting with $2a$ or $2b$), we need to send to backend
     if (storedHash && storedHash.startsWith('$2')) {
         try {
-            const response = await fetch(`${API_BASE_URL}/api/verify-passcode`, {
+            const response = await fetch(`${API_BASE_URL}/verify-passcode`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -1453,7 +1457,7 @@ async function sendResetCode() {
         showNotification('📧 Sending verification code...', 'info');
         
         // Send request to backend
-        const response = await fetch(`${API_BASE_URL}/api/memory/request-reset`, {
+        const response = await fetch(`${API_BASE_URL}/memory/request-reset`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ memoryId, email })
@@ -1531,7 +1535,7 @@ async function resetPasscode() {
         showNotification('🔄 Resetting passcode...', 'info');
         
         // Send request to backend
-        const response = await fetch(`${API_BASE_URL}/api/memory/reset-passcode`, {
+        const response = await fetch(`${API_BASE_URL}/memory/reset-passcode`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -1921,7 +1925,7 @@ function handleFileUpload(files) {
                     // Upload image to Firebase Storage
                     console.log(`� Uploading ${file.name} to Firebase Storage...`);
                     
-                    const response = await fetch(`${API_BASE_URL}/api/upload-image`, {
+                    const response = await fetch(`${API_BASE_URL}/upload-image`, {
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json'
@@ -2154,7 +2158,7 @@ async function deleteImage(index) {
             try {
                 console.log(`🗑️ Deleting from Firebase Storage: ${memory.fileName}`);
                 
-                const response = await fetch(`${API_BASE_URL}/api/delete-image`, {
+                const response = await fetch(`${API_BASE_URL}/delete-image`, {
                     method: 'DELETE',
                     headers: {
                         'Content-Type': 'application/json'
@@ -3125,7 +3129,7 @@ async function saveSpotifyToBackend(spotifyData) {
     try {
         console.log('🎵 Saving Spotify track to backend:', spotifyData);
         
-        const response = await fetch(`${API_BASE_URL}/api/memory/${MEMORY_ID}`, {
+        const response = await fetch(`${API_BASE_URL}/memory/${MEMORY_ID}`, {
             method: 'PUT',
             headers: {
                 'Content-Type': 'application/json'
@@ -3156,7 +3160,7 @@ async function clearSpotifyFromBackend() {
     try {
         console.log('🗑️ Clearing Spotify track from backend');
         
-        const response = await fetch(`${API_BASE_URL}/api/memory/${MEMORY_ID}`, {
+        const response = await fetch(`${API_BASE_URL}/memory/${MEMORY_ID}`, {
             method: 'PUT',
             headers: {
                 'Content-Type': 'application/json'

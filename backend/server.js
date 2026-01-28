@@ -20,7 +20,7 @@ require('dotenv').config();
 // Firebase Admin SDK
 const admin = require('firebase-admin');
 // Support both file and environment variable for service account (for deployment)
-const serviceAccount = process.env.FIREBASE_SERVICE_ACCOUNT 
+const serviceAccount = process.env.FIREBASE_SERVICE_ACCOUNT
     ? JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT)
     : require('./firebase-service-account.json');
 
@@ -58,13 +58,20 @@ const allowedOrigins = [
     'http://localhost:3000',
     'http://localhost:8080',
     'http://127.0.0.1:3000',
+    'https://aiueoka1.github.io',
     process.env.FRONTEND_URL, // Add your frontend URL as environment variable
 ].filter(Boolean); // Remove undefined values
 
+// Improved CORS: allow only whitelisted domains
 app.use(cors({
-    origin: process.env.NODE_ENV === 'production' 
-        ? allowedOrigins 
-        : true, // Allow all in development
+    origin: function(origin, callback) {
+        if (!origin) return callback(null, true); // allow non-browser requests
+        if (allowedOrigins.indexOf(origin) !== -1) {
+            return callback(null, true);
+        } else {
+            return callback(new Error('Not allowed by CORS'));
+        }
+    },
     credentials: true
 }));
 // Increase payload size limit to 50MB for base64 images
@@ -128,7 +135,7 @@ function generateMemoryId(prefix = '') {
     const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
     let id = prefix;
     const length = prefix ? 4 : 6;
-    
+
     for (let i = 0; i < length; i++) {
         id += chars.charAt(Math.floor(Math.random() * chars.length));
     }
@@ -181,7 +188,7 @@ app.post('/api/admin/generate-batch', async (req, res) => {
         const existingSnapshot = await db.collection('nfcChains')
             .select('memoryId')
             .get();
-        
+
         existingSnapshot.forEach(doc => {
             usedIds.add(doc.data().memoryId);
         });
@@ -210,7 +217,7 @@ app.post('/api/admin/generate-batch', async (req, res) => {
                 orderId: null,
                 customerName: null,
                 viewUrl: `https://smartlocket.com/m/${memoryId}`,
-                
+
                 // Gallery defaults
                 galleryTitle: 'SmartLocket Gallery',
                 galleryData: {},
@@ -224,7 +231,7 @@ app.post('/api/admin/generate-batch', async (req, res) => {
                     ]
                 },
                 spotifyUrl: null,
-                
+
                 // Reset fields
                 resetToken: null,
                 resetTokenExpiry: null
@@ -238,12 +245,12 @@ app.post('/api/admin/generate-batch', async (req, res) => {
         for (let i = 0; i < batch.length; i += batchSize) {
             const writeBatch = db.batch();
             const chunk = batch.slice(i, i + batchSize);
-            
+
             chunk.forEach(item => {
                 const docRef = db.collection('nfcChains').doc(item.memoryId);
                 writeBatch.set(docRef, item);
             });
-            
+
             await writeBatch.commit();
         }
 
@@ -271,7 +278,7 @@ app.post('/api/admin/generate-batch', async (req, res) => {
 app.get('/api/admin/stats', async (req, res) => {
     try {
         const snapshot = await db.collection('nfcChains').get();
-        
+
         const stats = {
             total: 0,
             unused: 0,
@@ -283,7 +290,7 @@ app.get('/api/admin/stats', async (req, res) => {
         snapshot.forEach(doc => {
             const data = doc.data();
             stats.total++;
-            
+
             if (data.status === 'unused') stats.unused++;
             if (data.status === 'written') stats.written++;
             if (data.status === 'activated') stats.activated++;
@@ -305,30 +312,30 @@ app.get('/api/admin/stats', async (req, res) => {
 app.get('/api/admin/inventory', async (req, res) => {
     try {
         const { page = 1, limit = 50, status, premium, search } = req.query;
-        
+
         let query = db.collection('nfcChains');
-        
+
         // Apply filters
         if (status && status !== 'all') {
             query = query.where('status', '==', status);
         }
-        
+
         if (premium && premium !== 'all') {
             query = query.where('premium', '==', premium === 'true');
         }
-        
+
         // Get all results
         const snapshot = await query.orderBy('createdAt', 'desc').get();
-        
+
         let results = [];
         snapshot.forEach(doc => {
             const data = doc.data();
-            
+
             // Apply search filter if provided
             if (search && !data.memoryId.toLowerCase().includes(search.toLowerCase())) {
                 return;
             }
-            
+
             results.push({
                 memoryId: data.memoryId,
                 status: data.status,
@@ -342,12 +349,12 @@ app.get('/api/admin/inventory', async (req, res) => {
                 viewUrl: data.viewUrl
             });
         });
-        
+
         // Manual pagination
         const startIndex = (page - 1) * limit;
         const endIndex = startIndex + parseInt(limit);
         const paginatedResults = results.slice(startIndex, endIndex);
-        
+
         res.json({
             success: true,
             data: paginatedResults,
@@ -376,17 +383,17 @@ app.get('/api/admin/next-unused', async (req, res) => {
             .orderBy('createdAt', 'asc')
             .limit(1)
             .get();
-        
+
         if (snapshot.empty) {
-            return res.status(404).json({ 
-                success: false, 
-                message: 'No unused SmartLockets available' 
+            return res.status(404).json({
+                success: false,
+                message: 'No unused SmartLockets available'
             });
         }
-        
+
         const doc = snapshot.docs[0];
         const data = doc.data();
-        
+
         res.json({
             success: true,
             data: {
@@ -410,23 +417,23 @@ app.get('/api/admin/next-unused', async (req, res) => {
 
 app.post('/api/admin/mark-written/:memoryId', async (req, res) => {
     const { memoryId } = req.params;
-    
+
     try {
         const docRef = db.collection('nfcChains').doc(memoryId);
         const doc = await docRef.get();
-        
+
         if (!doc.exists) {
-            return res.status(404).json({ 
-                success: false, 
-                message: 'SmartLocket not found' 
+            return res.status(404).json({
+                success: false,
+                message: 'SmartLocket not found'
             });
         }
-        
+
         await docRef.update({
             status: 'written',
             writtenAt: admin.firestore.FieldValue.serverTimestamp()
         });
-        
+
         res.json({
             success: true,
             message: 'SmartLocket marked as written',
@@ -445,18 +452,18 @@ app.post('/api/admin/mark-written/:memoryId', async (req, res) => {
 
 app.post('/api/admin/assign-order', async (req, res) => {
     const { memoryId, orderId, customerName, customerEmail } = req.body;
-    
+
     try {
         const docRef = db.collection('nfcChains').doc(memoryId);
         const doc = await docRef.get();
-        
+
         if (!doc.exists) {
-            return res.status(404).json({ 
-                success: false, 
-                message: 'SmartLocket not found' 
+            return res.status(404).json({
+                success: false,
+                message: 'SmartLocket not found'
             });
         }
-        
+
         await docRef.update({
             orderId,
             customerName: customerName || null,
@@ -464,7 +471,7 @@ app.post('/api/admin/assign-order', async (req, res) => {
             assignedAt: admin.firestore.FieldValue.serverTimestamp(),
             status: 'shipped'
         });
-        
+
         res.json({
             success: true,
             message: 'Order assigned successfully',
@@ -489,20 +496,20 @@ app.post('/api/activation/send-code', async (req, res) => {
         // Check if memory exists and is not already activated
         const docRef = db.collection('nfcChains').doc(memoryId);
         const doc = await docRef.get();
-        
+
         if (!doc.exists) {
             return res.status(404).json({ message: 'NFCchain not found' });
         }
-        
+
         const nfcData = doc.data();
-        
+
         if (nfcData.status === 'activated') {
             return res.status(400).json({ message: 'SmartLocket already activated' });
         }
 
         // Generate verification code
         const code = generateVerificationCode();
-        
+
         // Store code with expiry (5 minutes)
         verificationCodes.set(`${memoryId}:${email}`, {
             code,
@@ -570,7 +577,7 @@ app.post('/api/activation/verify-code', async (req, res) => {
 
         // Generate temporary token for next step
         const token = crypto.randomBytes(32).toString('hex');
-        
+
         // Store token temporarily (use Redis in production)
         verificationCodes.set(`token:${token}`, {
             memoryId,
@@ -578,10 +585,10 @@ app.post('/api/activation/verify-code', async (req, res) => {
             expiry: Date.now() + 15 * 60 * 1000 // 15 minutes
         });
 
-        res.json({ 
-            success: true, 
+        res.json({
+            success: true,
             token,
-            message: 'Email verified successfully' 
+            message: 'Email verified successfully'
         });
 
     } catch (error) {
@@ -606,7 +613,7 @@ app.post('/api/activation/complete', async (req, res) => {
     try {
         // Verify token
         const tokenData = verificationCodes.get(`token:${token}`);
-        
+
         if (!tokenData) {
             return res.status(401).json({ message: 'Invalid or expired token' });
         }
@@ -640,7 +647,7 @@ app.post('/api/activation/complete', async (req, res) => {
 
         // Generate session token
         const sessionToken = crypto.randomBytes(32).toString('hex');
-        
+
         // Store session (use Redis with expiry in production)
         verificationCodes.set(`session:${sessionToken}`, {
             memoryId,
@@ -711,7 +718,7 @@ app.post('/api/password-reset/request', async (req, res) => {
     try {
         // Verify memory exists and email matches
         // const memory = await db.collection('memoryChains').findOne({ memoryId, email });
-        
+
         // if (!memory) {
         //     // Don't reveal if email exists or not
         //     return res.json({ success: true, message: 'If this email is registered, you will receive reset instructions' });
@@ -755,9 +762,9 @@ app.post('/api/password-reset/request', async (req, res) => {
             `
         });
 
-        res.json({ 
-            success: true, 
-            message: 'If this email is registered, you will receive reset instructions' 
+        res.json({
+            success: true,
+            message: 'If this email is registered, you will receive reset instructions'
         });
 
     } catch (error) {
@@ -806,14 +813,15 @@ app.post('/api/password-reset/confirm', async (req, res) => {
 // ==========================================
 
 // Request reset with verification code
-app.post('/api/memory/request-reset', async (req, res) => {
+// Support both `/api/memory/request-reset` and `/memory/request-reset`
+app.post(['/api/memory/request-reset', '/memory/request-reset'], async (req, res) => {
     const { memoryId, email } = req.body;
 
     try {
         if (!memoryId || !email) {
-            return res.status(400).json({ 
-                success: false, 
-                message: 'Memory ID and email are required' 
+            return res.status(400).json({
+                success: false,
+                message: 'Memory ID and email are required'
             });
         }
 
@@ -822,9 +830,9 @@ app.post('/api/memory/request-reset', async (req, res) => {
         const memoryDoc = await memoryRef.get();
 
         if (!memoryDoc.exists) {
-            return res.status(404).json({ 
-                success: false, 
-                message: 'Memory ID not found' 
+            return res.status(404).json({
+                success: false,
+                message: 'Memory ID not found'
             });
         }
 
@@ -832,9 +840,9 @@ app.post('/api/memory/request-reset', async (req, res) => {
 
         // Verify email matches
         if (memoryData.email !== email) {
-            return res.status(400).json({ 
-                success: false, 
-                message: 'Email does not match this Memory ID' 
+            return res.status(400).json({
+                success: false,
+                message: 'Email does not match this Memory ID'
             });
         }
 
@@ -879,38 +887,39 @@ app.post('/api/memory/request-reset', async (req, res) => {
             `
         });
 
-        res.json({ 
-            success: true, 
+        res.json({
+            success: true,
             message: 'Verification code sent to your email',
             token: resetToken
         });
 
     } catch (error) {
         console.error('Request reset error:', error);
-        res.status(500).json({ 
-            success: false, 
-            message: 'Failed to send verification code. Please try again.' 
+        res.status(500).json({
+            success: false,
+            message: 'Failed to send verification code. Please try again.'
         });
     }
 });
 
 // Reset passcode with verification code
-app.post('/api/memory/reset-passcode', async (req, res) => {
+// Support both `/api/memory/reset-passcode` and `/memory/reset-passcode`
+app.post(['/api/memory/reset-passcode', '/memory/reset-passcode'], async (req, res) => {
     const { memoryId, code, newPasscode, token } = req.body;
 
     try {
         if (!memoryId || !code || !newPasscode || !token) {
-            return res.status(400).json({ 
-                success: false, 
-                message: 'All fields are required' 
+            return res.status(400).json({
+                success: false,
+                message: 'All fields are required'
             });
         }
 
         // Validate passcode format
         if (!/^\d{6}$/.test(newPasscode)) {
-            return res.status(400).json({ 
-                success: false, 
-                message: 'Passcode must be 6 digits' 
+            return res.status(400).json({
+                success: false,
+                message: 'Passcode must be 6 digits'
             });
         }
 
@@ -919,9 +928,9 @@ app.post('/api/memory/reset-passcode', async (req, res) => {
         const memoryDoc = await memoryRef.get();
 
         if (!memoryDoc.exists) {
-            return res.status(404).json({ 
-                success: false, 
-                message: 'Memory ID not found' 
+            return res.status(404).json({
+                success: false,
+                message: 'Memory ID not found'
             });
         }
 
@@ -929,26 +938,26 @@ app.post('/api/memory/reset-passcode', async (req, res) => {
 
         // Verify token matches
         if (memoryData.resetToken !== token) {
-            return res.status(400).json({ 
-                success: false, 
-                message: 'Invalid reset session' 
+            return res.status(400).json({
+                success: false,
+                message: 'Invalid reset session'
             });
         }
 
         // Verify code matches
         if (memoryData.resetCode !== code) {
-            return res.status(400).json({ 
-                success: false, 
-                message: 'Invalid verification code' 
+            return res.status(400).json({
+                success: false,
+                message: 'Invalid verification code'
             });
         }
 
         // Check if code expired
         const expiryTime = memoryData.resetCodeExpiry.toDate();
         if (new Date() > expiryTime) {
-            return res.status(400).json({ 
-                success: false, 
-                message: 'Verification code has expired. Please request a new one.' 
+            return res.status(400).json({
+                success: false,
+                message: 'Verification code has expired. Please request a new one.'
             });
         }
 
@@ -963,17 +972,17 @@ app.post('/api/memory/reset-passcode', async (req, res) => {
             resetCodeExpiry: admin.firestore.FieldValue.delete()
         });
 
-        res.json({ 
-            success: true, 
+        res.json({
+            success: true,
             message: 'Passcode reset successfully',
             passcodeHash: passcodeHash
         });
 
     } catch (error) {
         console.error('Reset passcode error:', error);
-        res.status(500).json({ 
-            success: false, 
-            message: 'Failed to reset passcode. Please try again.' 
+        res.status(500).json({
+            success: false,
+            message: 'Failed to reset passcode. Please try again.'
         });
     }
 });
@@ -1048,7 +1057,9 @@ app.get('/api/memory/:memoryId/status', async (req, res) => {
 // ==========================================
 
 // Get full gallery data
-app.get('/api/memory/:memoryId', async (req, res) => {
+// Support both legacy `/api/memory/:memoryId` (used by older clients)
+// and new `/memory/:memoryId` (used by the SmartLocket gallery frontend).
+app.get(['/api/memory/:memoryId', '/memory/:memoryId'], async (req, res) => {
     const { memoryId } = req.params;
 
     try {
@@ -1092,7 +1103,8 @@ app.get('/api/memory/:memoryId', async (req, res) => {
 });
 
 // Update gallery data (requires authentication in production)
-app.put('/api/memory/:memoryId', async (req, res) => {
+// Support both `/api/memory/:memoryId` and `/memory/:memoryId`
+app.put(['/api/memory/:memoryId', '/memory/:memoryId'], async (req, res) => {
     const { memoryId } = req.params;
     const { galleryTitle, galleryData, images, letterContent, spotifyUrl, spotifyTrack, themeSettings } = req.body;
 
@@ -1138,12 +1150,12 @@ app.put('/api/memory/:memoryId', async (req, res) => {
             // Sanitize letterContent to ensure Firebase compatibility
             updates.letterContent = {
                 title: String(letterContent.title || 'Welcome'),
-                paragraphs: Array.isArray(letterContent.paragraphs) 
+                paragraphs: Array.isArray(letterContent.paragraphs)
                     ? letterContent.paragraphs.map(p => String(p || ''))
                     : []
             };
         }
-        
+
         // Support both spotifyUrl (legacy) and spotifyTrack (new format)
         if (spotifyUrl !== undefined) {
             updates.spotifyUrl = spotifyUrl === null ? null : String(spotifyUrl);
@@ -1159,7 +1171,7 @@ app.put('/api/memory/:memoryId', async (req, res) => {
                 };
             }
         }
-        
+
         if (themeSettings !== undefined) {
             updates.themeSettings = {
                 theme: String(themeSettings.theme || 'light'),
@@ -1168,7 +1180,7 @@ app.put('/api/memory/:memoryId', async (req, res) => {
                 showWelcomeLetter: Boolean(themeSettings.showWelcomeLetter)
             };
         }
-        
+
         updates.updatedAt = admin.firestore.FieldValue.serverTimestamp();
 
         await docRef.update(updates);
@@ -1184,21 +1196,22 @@ app.put('/api/memory/:memoryId', async (req, res) => {
     } catch (error) {
         console.error('Update gallery error:', error);
         console.error('Error details:', error.message, error.stack);
-        res.status(500).json({ 
+        res.status(500).json({
             message: 'Failed to update gallery',
-            error: error.message 
+            error: error.message
         });
     }
 });
 
 // Verify passcode for edit mode access
-app.post('/api/verify-passcode', async (req, res) => {
+// Support both `/api/verify-passcode` and `/verify-passcode`
+app.post(['/api/verify-passcode', '/verify-passcode'], async (req, res) => {
     const { memoryId, passcode } = req.body;
 
     if (!memoryId || !passcode) {
-        return res.status(400).json({ 
-            valid: false, 
-            message: 'Memory ID and passcode are required' 
+        return res.status(400).json({
+            valid: false,
+            message: 'Memory ID and passcode are required'
         });
     }
 
@@ -1207,9 +1220,9 @@ app.post('/api/verify-passcode', async (req, res) => {
         const doc = await docRef.get();
 
         if (!doc.exists) {
-            return res.status(404).json({ 
-                valid: false, 
-                message: 'SmartLocket not found' 
+            return res.status(404).json({
+                valid: false,
+                message: 'SmartLocket not found'
             });
         }
 
@@ -1230,9 +1243,9 @@ app.post('/api/verify-passcode', async (req, res) => {
 
     } catch (error) {
         console.error('Passcode verification error:', error);
-        res.status(500).json({ 
-            valid: false, 
-            message: 'Verification failed' 
+        res.status(500).json({
+            valid: false,
+            message: 'Verification failed'
         });
     }
 });
@@ -1242,7 +1255,8 @@ app.post('/api/verify-passcode', async (req, res) => {
 // ==========================================
 
 // Upload image to Firebase Storage
-app.post('/api/upload-image', async (req, res) => {
+// Support both `/api/upload-image` and `/upload-image`
+app.post(['/api/upload-image', '/upload-image'], async (req, res) => {
     const { memoryId, imageData, fileName } = req.body;
 
     if (!memoryId || !imageData) {
@@ -1295,7 +1309,7 @@ app.post('/api/upload-image', async (req, res) => {
 
     } catch (error) {
         console.error('❌ R2 upload error:', error);
-        res.status(500).json({ 
+        res.status(500).json({
             message: 'Failed to upload image to R2',
             error: error.message
         });
@@ -1303,7 +1317,8 @@ app.post('/api/upload-image', async (req, res) => {
 });
 
 // Delete image from Firebase Storage
-app.delete('/api/delete-image', async (req, res) => {
+// Support both `/api/delete-image` and `/delete-image`
+app.delete(['/api/delete-image', '/delete-image'], async (req, res) => {
     const { fileName } = req.body;
 
     if (!fileName) {
@@ -1328,9 +1343,9 @@ app.delete('/api/delete-image', async (req, res) => {
 
     } catch (error) {
         console.error('❌ R2 delete error:', error);
-        res.status(500).json({ 
+        res.status(500).json({
             message: 'Failed to delete image from R2',
-            error: error.message 
+            error: error.message
         });
     }
 });
@@ -1347,10 +1362,10 @@ const PORT = process.env.PORT || 3000;
 // The following block is ONLY for local/server development. It must be disabled for Firebase Functions deployment.
 // Commented out to prevent EADDRINUSE error in Firebase Functions:
 // app.listen(PORT, () => {
-//     console.log(`✅ Server running on port ${PORT}`);
-//     console.log(`🔥 Firebase connected`);
-//     console.log(`📊 Collection: nfcChains`);
-//     console.log(`🗄️ Storage bucket: ${bucket.name}`);
+//   console.log(`✅ Server running on port ${PORT}`);
+//   console.log(`🔥 Firebase connected`);
+//   console.log(`📊 Collection: nfcChains`);
+//   console.log(`🗄️ Storage bucket: ${bucket.name}`);
 // });
 
 module.exports = app;

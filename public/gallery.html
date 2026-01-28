@@ -573,9 +573,12 @@
                             </svg>
                             Passcode
                         </label>
-                        <input type="password" id="passcodeInput" placeholder="Enter 6-digit passcode" 
-                               maxlength="6" pattern="[0-9]{6}" inputmode="numeric"
-                               style="font-size: 1.2rem; letter-spacing: 0.3em; text-align: center;">
+                        <!-- Wrap password input in a non-submitting form to satisfy browser/password-manager expectations -->
+                        <form onsubmit="return false;">
+                            <input type="password" id="passcodeInput" placeholder="Enter 6-digit passcode" 
+                                   maxlength="6" pattern="[0-9]{6}" inputmode="numeric"
+                                   style="font-size: 1.2rem; letter-spacing: 0.3em; text-align: center;">
+                        </form>
                     </div>
 
                     <div id="passcodeError" style="display: none; color: #ef4444; text-align: center; margin-top: 1rem; font-size: 0.9rem;">
@@ -673,9 +676,12 @@
                             </svg>
                             New Passcode
                         </label>
-                        <input type="password" id="newPasscode" placeholder="Enter new 6-digit passcode" 
-                               maxlength="6" pattern="[0-9]{6}" inputmode="numeric"
-                               style="font-size: 1.2rem; letter-spacing: 0.3em; text-align: center;">
+                        <!-- Wrap password input in a non-submitting form to satisfy browser/password-manager expectations -->
+                        <form onsubmit="return false;">
+                            <input type="password" id="newPasscode" placeholder="Enter new 6-digit passcode" 
+                                   maxlength="6" pattern="[0-9]{6}" inputmode="numeric"
+                                   style="font-size: 1.2rem; letter-spacing: 0.3em; text-align: center;">
+                        </form>
                     </div>
 
                     <div class="image-field-group">
@@ -685,9 +691,12 @@
                             </svg>
                             Confirm New Passcode
                         </label>
-                        <input type="password" id="confirmNewPasscode" placeholder="Re-enter new passcode" 
-                               maxlength="6" pattern="[0-9]{6}" inputmode="numeric"
-                               style="font-size: 1.2rem; letter-spacing: 0.3em; text-align: center;">
+                        <!-- Wrap password input in a non-submitting form to satisfy browser/password-manager expectations -->
+                        <form onsubmit="return false;">
+                            <input type="password" id="confirmNewPasscode" placeholder="Re-enter new passcode" 
+                                   maxlength="6" pattern="[0-9]{6}" inputmode="numeric"
+                                   style="font-size: 1.2rem; letter-spacing: 0.3em; text-align: center;">
+                        </form>
                     </div>
 
                     <div id="forgotStep2Error" style="display: none; color: #ef4444; text-align: center; margin-top: 1rem; font-size: 0.9rem;"></div>
