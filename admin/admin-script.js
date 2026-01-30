@@ -116,7 +116,7 @@ document.getElementById('generateForm').addEventListener('submit', async functio
     submitBtn.innerHTML = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" opacity="0.25"/><path d="M4 12a8 8 0 018-8" stroke="currentColor" stroke-width="4"/></svg> Generating...';
     
     try {
-        const response = await fetch(`${API_BASE_URL}/api/admin/generate-batch`, {
+        const response = await fetch(`${API_BASE_URL}/admin/generate-batch`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
@@ -202,7 +202,7 @@ async function loadInventory() {
         const status = document.getElementById('filterStatus')?.value || 'all';
         const premium = document.getElementById('filterPremium')?.value || 'all';
         
-        let url = `${API_BASE_URL}/api/admin/inventory?page=1&limit=50`;
+        let url = `${API_BASE_URL}/admin/inventory?page=1&limit=50`;
         if (status !== 'all') url += `&status=${status}`;
         if (premium !== 'all') url += `&premium=${premium}`;
         
@@ -278,7 +278,7 @@ let currentSmartLocket = null;
 
 async function loadNextUnused() {
     try {
-        const response = await fetch(`${API_BASE_URL}/api/admin/next-unused`);
+        const response = await fetch(`${API_BASE_URL}/admin/next-unused`);
         
         if (response.status === 404) {
             alert('No unused SmartLockets available. Please generate a new batch first.');
@@ -312,7 +312,7 @@ async function markAsWritten() {
     }
     
     try {
-        const response = await fetch(`${API_BASE_URL}/api/admin/mark-written/${currentSmartLocket.memoryId}`, {
+        const response = await fetch(`${API_BASE_URL}/admin/mark-written/${currentSmartLocket.memoryId}`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
@@ -341,7 +341,7 @@ async function markAsWritten() {
 
 async function loadNFCStats() {
     try {
-        const response = await fetch(`${API_BASE_URL}/api/admin/stats`);
+        const response = await fetch(`${API_BASE_URL}/admin/stats`);
         const stats = await response.json();
         
         // For now, show total written (would need daily tracking in production)
@@ -379,7 +379,7 @@ document.getElementById('orderAssignmentForm')?.addEventListener('submit', async
     const customerEmail = document.getElementById('customerEmail').value.trim();
     
     try {
-        const response = await fetch(`${API_BASE_URL}/api/admin/assign-order`, {
+        const response = await fetch(`${API_BASE_URL}/admin/assign-order`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'

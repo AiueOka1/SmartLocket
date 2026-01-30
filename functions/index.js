@@ -184,12 +184,8 @@ app.get(
         photoLimit: data.photoLimit || 0,
         orderId: data.orderId || null,
         email: data.email || null,
-        createdAt: data.createdAt
-          ? formatTimestamp(data.createdAt)
-          : null,
-        activatedAt: data.activatedAt
-          ? formatTimestamp(data.activatedAt)
-          : null,
+        createdAt: data.createdAt ? formatTimestamp(data.createdAt) : null,
+        activatedAt: data.activatedAt ? formatTimestamp(data.activatedAt) : null,
       });
     });
 
@@ -251,12 +247,8 @@ app.get("/api/admin/inventory", async (req, res) => {
         photoLimit: data.photoLimit || 0,
         orderId: data.orderId || null,
         email: data.email || null,
-        createdAt: data.createdAt
-          ? formatTimestamp(data.createdAt)
-          : null,
-        activatedAt: data.activatedAt
-          ? formatTimestamp(data.activatedAt)
-          : null,
+        createdAt: data.createdAt ? formatTimestamp(data.createdAt) : null,
+        activatedAt: data.activatedAt ? formatTimestamp(data.activatedAt) : null,
       });
     });
 
