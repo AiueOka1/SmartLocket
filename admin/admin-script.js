@@ -58,7 +58,7 @@ document.querySelectorAll('.admin-menu a').forEach(link => {
 
 async function loadDashboardStats() {
     try {
-        const response = await fetch(`${API_BASE_URL}/api/admin/stats`);
+        const response = await fetch(`${API_BASE_URL}/admin/stats`);
         const stats = await response.json();
         
         document.getElementById('totalChains').textContent = stats.total || 0;
