@@ -6,7 +6,7 @@ const cors = require("cors");
 const admin = require("firebase-admin");
 const bcrypt = require("bcryptjs");
 const nodemailer = require("nodemailer");
-const {S3Client, PutObjectCommand} = require("@aws-sdk/client-s3");
+const { S3Client, PutObjectCommand } = require("@aws-sdk/client-s3");
 
 // --------------------
 // Firebase init
@@ -91,19 +91,205 @@ function generateVerificationCode() {
 // Routes
 // --------------------
 app.get("/health", (req, res) => {
-  res.json({status: "ok"});
+  res.json({ status: "ok" });
+});
+
+app.get(
+  ["/api/admin/stats", "/admin/stats"],
+  async (req, res) => {
+    try {
+      const snapshot = await db.collection("nfcChains").get();
+
+      let total = 0;
+      let unused = 0;
+      let written = 0;
+      let activated = 0;
+      let premium = 0;
+
+      snapshot.forEach((doc) => {
+        total += 1;
+
+        const data = doc.data();
+
+        if (data.status === "unused") {
+          unused += 1;
+        }
+
+        if (data.status === "written") {
+          written += 1;
+        }
+
+        if (data.status === "activated") {
+          activated += 1;
+        }
+
+        if (data.premium === true) {
+          premium += 1;
+        }
+      });
+
+      return res.json({
+        total,
+        unused,
+        written,
+        activated,
+        premium,
+      });
+    } catch (error) {
+      console.error("Admin stats error:", error);
+      return res.status(500).json({
+        message: "Failed to load admin stats",
+      });
+    }
+  },
+);
+
+/**
+ * Admin inventory list (paginated + filtered)
+ */
+app.get(
+  ["/api/admin/inventory", "/admin/inventory"],
+  async (req, res) => {
+  try {
+    const page = parseInt(req.query.page, 10) || 1;
+    const limit = parseInt(req.query.limit, 10) || 50;
+    const status = req.query.status;
+    const premium = req.query.premium;
+
+    let query = db.collection("nfcChains");
+
+    // Optional filters
+    if (status && status !== "all") {
+      query = query.where("status", "==", status);
+    }
+
+    if (premium && premium !== "all") {
+      query = query.where(
+        "premium",
+        "==",
+        premium === "true" || premium === "premium"
+      );
+    }
+
+    const snapshot = await query.get();
+
+    const allDocs = [];
+    snapshot.forEach((doc) => {
+      const data = doc.data();
+
+      allDocs.push({
+        memoryId: data.memoryId || doc.id,
+        status: data.status || "unused",
+        premium: data.premium || false,
+        photoLimit: data.photoLimit || 0,
+        orderId: data.orderId || null,
+        email: data.email || null,
+        createdAt: data.createdAt
+          ? formatTimestamp(data.createdAt)
+          : null,
+        activatedAt: data.activatedAt
+          ? formatTimestamp(data.activatedAt)
+          : null,
+      });
+    });
+
+    const total = allDocs.length;
+    const start = (page - 1) * limit;
+    const end = start + limit;
+
+    const paginated = allDocs.slice(start, end);
+
+    return res.json({
+      data: paginated,
+      page,
+      limit,
+      total,
+    });
+  } catch (error) {
+    console.error("Admin inventory error:", error);
+    return res.status(500).json({
+      message: "Failed to load inventory",
+    });
+  }
+});
+
+/**
+ * Admin inventory list (paginated + filtered)
+ */
+app.get("/api/admin/inventory", async (req, res) => {
+  try {
+    const page = parseInt(req.query.page, 10) || 1;
+    const limit = parseInt(req.query.limit, 10) || 50;
+    const status = req.query.status;
+    const premium = req.query.premium;
+
+    let query = db.collection("nfcChains");
+
+    // Optional filters
+    if (status && status !== "all") {
+      query = query.where("status", "==", status);
+    }
+
+    if (premium && premium !== "all") {
+      query = query.where(
+        "premium",
+        "==",
+        premium === "true" || premium === "premium"
+      );
+    }
+
+    const snapshot = await query.get();
+
+    const allDocs = [];
+    snapshot.forEach((doc) => {
+      const data = doc.data();
+
+      allDocs.push({
+        memoryId: data.memoryId || doc.id,
+        status: data.status || "unused",
+        premium: data.premium || false,
+        photoLimit: data.photoLimit || 0,
+        orderId: data.orderId || null,
+        email: data.email || null,
+        createdAt: data.createdAt
+          ? formatTimestamp(data.createdAt)
+          : null,
+        activatedAt: data.activatedAt
+          ? formatTimestamp(data.activatedAt)
+          : null,
+      });
+    });
+
+    const total = allDocs.length;
+    const start = (page - 1) * limit;
+    const end = start + limit;
+
+    const paginated = allDocs.slice(start, end);
+
+    return res.json({
+      data: paginated,
+      page,
+      limit,
+      total,
+    });
+  } catch (error) {
+    console.error("Admin inventory error:", error);
+    return res.status(500).json({
+      message: "Failed to load inventory",
+    });
+  }
 });
 
 // Get memory
 app.get(["/api/memory/:memoryId", "/memory/:memoryId"], async (req, res) => {
-  const {memoryId} = req.params;
+  const { memoryId } = req.params;
 
   try {
     const docRef = db.collection("nfcChains").doc(memoryId);
     const doc = await docRef.get();
 
     if (!doc.exists) {
-      return res.status(404).json({message: "NFCchain not found"});
+      return res.status(404).json({ message: "NFCchain not found" });
     }
 
     const data = doc.data();
@@ -126,17 +312,17 @@ app.get(["/api/memory/:memoryId", "/memory/:memoryId"], async (req, res) => {
     });
   } catch (err) {
     console.error(err);
-    return res.status(500).json({message: "Failed to fetch memory"});
+    return res.status(500).json({ message: "Failed to fetch memory" });
   }
 });
 
 // Update memory (THIS FIXES YOUR 404 PUT)
 app.put(["/api/memory/:memoryId", "/memory/:memoryId"], async (req, res) => {
-  const {memoryId} = req.params;
+  const { memoryId } = req.params;
   const updates = req.body;
 
   if (!updates || !Object.keys(updates).length) {
-    return res.status(400).json({message: "No update data"});
+    return res.status(400).json({ message: "No update data" });
   }
 
   try {
@@ -144,7 +330,7 @@ app.put(["/api/memory/:memoryId", "/memory/:memoryId"], async (req, res) => {
     const doc = await ref.get();
 
     if (!doc.exists) {
-      return res.status(404).json({message: "NFCchain not found"});
+      return res.status(404).json({ message: "NFCchain not found" });
     }
 
     await ref.update({
@@ -152,19 +338,19 @@ app.put(["/api/memory/:memoryId", "/memory/:memoryId"], async (req, res) => {
       updatedAt: admin.firestore.FieldValue.serverTimestamp(),
     });
 
-    return res.json({success: true});
+    return res.json({ success: true });
   } catch (err) {
     console.error(err);
-    return res.status(500).json({success: false});
+    return res.status(500).json({ success: false });
   }
 });
 
 // Verify passcode
 app.post(["/api/verify-passcode", "/verify-passcode"], async (req, res) => {
-  const {memoryId, passcode} = req.body;
+  const { memoryId, passcode } = req.body;
 
   if (!memoryId || !passcode) {
-    return res.status(400).json({valid: false});
+    return res.status(400).json({ valid: false });
   }
 
   try {
@@ -172,29 +358,29 @@ app.post(["/api/verify-passcode", "/verify-passcode"], async (req, res) => {
     const doc = await ref.get();
 
     if (!doc.exists) {
-      return res.status(404).json({valid: false});
+      return res.status(404).json({ valid: false });
     }
 
     const data = doc.data();
 
     if (!data.passcodeHash) {
-      return res.json({valid: true});
+      return res.json({ valid: true });
     }
 
     const valid = await bcrypt.compare(passcode, data.passcodeHash);
-    return res.json({valid});
+    return res.json({ valid });
   } catch (err) {
     console.error(err);
-    return res.status(500).json({valid: false});
+    return res.status(500).json({ valid: false });
   }
 });
 
 // Upload image to R2
 app.post(["/api/upload-image", "/upload-image"], async (req, res) => {
-  const {memoryId, imageData, fileName} = req.body;
+  const { memoryId, imageData, fileName } = req.body;
 
   if (!memoryId || !imageData) {
-    return res.status(400).json({message: "Missing image data"});
+    return res.status(400).json({ message: "Missing image data" });
   }
 
   try {
@@ -219,7 +405,7 @@ app.post(["/api/upload-image", "/upload-image"], async (req, res) => {
     });
   } catch (err) {
     console.error(err);
-    return res.status(500).json({message: "Upload failed"});
+    return res.status(500).json({ message: "Upload failed" });
   }
 });
 
@@ -227,10 +413,10 @@ app.post(["/api/upload-image", "/upload-image"], async (req, res) => {
 app.post(
   ["/api/memory/request-reset", "/memory/request-reset"],
   async (req, res) => {
-    const {memoryId, email} = req.body;
+    const { memoryId, email } = req.body;
 
     if (!memoryId || !email) {
-      return res.status(400).json({success: false});
+      return res.status(400).json({ success: false });
     }
 
     try {
@@ -238,12 +424,12 @@ app.post(
       const doc = await ref.get();
 
       if (!doc.exists) {
-        return res.status(404).json({success: false});
+        return res.status(404).json({ success: false });
       }
 
       const data = doc.data();
       if (data.email !== email) {
-        return res.status(400).json({success: false});
+        return res.status(400).json({ success: false });
       }
 
       const code = generateVerificationCode();
@@ -262,10 +448,10 @@ app.post(
         text: `Your reset code is ${code}`,
       });
 
-      return res.json({success: true});
+      return res.json({ success: true });
     } catch (err) {
       console.error(err);
-      return res.status(500).json({success: false});
+      return res.status(500).json({ success: false });
     }
   },
 );
@@ -274,10 +460,10 @@ app.post(
 app.post(
   ["/api/memory/reset-passcode", "/memory/reset-passcode"],
   async (req, res) => {
-    const {memoryId, code, newPasscode} = req.body;
+    const { memoryId, code, newPasscode } = req.body;
 
     if (!memoryId || !code || !newPasscode) {
-      return res.status(400).json({success: false});
+      return res.status(400).json({ success: false });
     }
 
     try {
@@ -285,13 +471,13 @@ app.post(
       const doc = await ref.get();
 
       if (!doc.exists()) {
-        return res.status(404).json({success: false});
+        return res.status(404).json({ success: false });
       }
 
       const data = doc.data();
 
       if (data.resetCode !== code) {
-        return res.status(400).json({success: false});
+        return res.status(400).json({ success: false });
       }
 
       const hash = await bcrypt.hash(newPasscode, 10);
@@ -302,10 +488,10 @@ app.post(
         resetCodeExpiry: admin.firestore.FieldValue.delete(),
       });
 
-      return res.json({success: true});
+      return res.json({ success: true });
     } catch (err) {
       console.error(err);
-      return res.status(500).json({success: false});
+      return res.status(500).json({ success: false });
     }
   },
 );
