@@ -3071,9 +3071,6 @@ function convertSpotifyUrl(url) {
 function openSpotifyModal() {
     // Check if passcode protection is enabled
     if (STORED_PASSCODE_HASH && !isEditMode) {
-        console.log('🔒 Passcode required for Spotify changes');
-        
-        // Store the action to perform after passcode verification
         window.pendingSpotifyAction = 'open';
         openPasscodeModal();
         return;
@@ -3135,20 +3132,7 @@ function showSpotifyPreview(embedUrl, type) {
             allow="encrypted-media"
             style="border-radius: 8px;">
         </iframe>
-    `;async function verifyPasscodeAndEnterEditMode() {
-  // ...existing passcode verification logic...
-  const isValid = await verifyPasscode(inputPasscode, STORED_PASSCODE_HASH);
-  if (isValid) {
-    closePasscodeModal();
-    enterEditMode(); // Only enable edit mode after verification
-  } else {
-    showNotification("Incorrect passcode", "error");
-  }
-}
-
-// Make globally available
-window.onEditClick = onEditClick;
-window.verifyPasscodeAndEnterEditMode = verifyPasscodeAndEnterEditMode;
+    `;
     
     previewSection.style.display = 'block';
 }
