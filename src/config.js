@@ -34,7 +34,10 @@ const API_CONFIG = {
 };
 
 // Global API_BASE_URL for backwards compatibility
-const API_BASE_URL = API_CONFIG.BASE_URL;
+// Ensure we only declare this once
+if (typeof window.API_BASE_URL === 'undefined') {
+    window.API_BASE_URL = API_CONFIG.BASE_URL;
+}
 
 // Example usage:
 // fetch(API_CONFIG.getUrl('/api/admin/stats'))
