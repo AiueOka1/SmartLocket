@@ -39,6 +39,64 @@ function getImageUrl(filename) {
     return `${R2_PUBLIC_URL}/${filename}`;
 }
 
+// Enhanced image loading with mobile data optimization
+function createOptimizedImage(src, alt = '', className = '') {
+    const img = document.createElement('img');
+    
+    // Detect connection quality
+    const connection = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
+    const isSlowConnection = connection && (connection.effectiveType === 'slow-2g' || connection.effectiveType === '2g');
+    const isMobileData = connection && connection.type && !connection.type.includes('wifi');
+    
+    // Set basic attributes
+    img.alt = alt;
+    if (className) img.className = className;
+    
+    // Enable native lazy loading
+    img.loading = 'lazy';
+    
+    // Add optimized loading for mobile data
+    if (isSlowConnection || isMobileData) {
+        img.style.filter = 'blur(5px)';
+        img.style.transition = 'filter 0.3s ease';
+        
+        const lowQualityPlaceholder = src.includes('r2.dev') 
+            ? src.replace(/(\.[^.]+)$/, '_thumb$1') // Try thumbnail version first
+            : src;
+            
+        // Load low quality first, then replace with full quality
+        img.src = lowQualityPlaceholder;
+        
+        img.addEventListener('load', function() {
+            // Remove blur effect once loaded
+            img.style.filter = 'none';
+            
+            // If this was a placeholder, load the full quality version
+            if (lowQualityPlaceholder !== src && this.src === lowQualityPlaceholder) {
+                const fullImg = new Image();
+                fullImg.onload = function() {
+                    img.src = src;
+                    console.log(`� Upgraded image quality for mobile data: ${src}`);
+                };
+                fullImg.src = src;
+            }
+        }, { once: true });
+        
+        console.log(`📱 Using mobile-optimized loading for: ${src}`);
+    } else {
+        // Standard loading for fast connections
+        img.src = src;
+    }
+    
+    // Add error handling
+    img.addEventListener('error', function() {
+        console.error(`Failed to load image: ${src}`);
+        this.style.display = 'none';
+    });
+    
+    return img;
+}
+
 // ========================================
 // MEMORY ID & BACKEND INTEGRATION
 // ========================================
@@ -73,12 +131,80 @@ function getMemoryIdFromURL() {
 // Global Memory ID
 const MEMORY_ID = getMemoryIdFromURL();
 
+// Network status indicator
+function initNetworkStatusIndicator() {
+    const connection = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
+    
+    if (!connection) return; // Skip if not supported
+    
+    const statusDiv = document.createElement('div');
+    statusDiv.id = 'network-status';
+    statusDiv.style.cssText = `
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        padding: 8px 12px;
+        border-radius: 20px;
+        font-size: 12px;
+        font-weight: 600;
+        z-index: 1000;
+        transition: all 0.3s ease;
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        display: none;
+    `;
+    
+    function updateNetworkStatus() {
+        const isSlowConnection = connection.effectiveType === 'slow-2g' || connection.effectiveType === '2g';
+        const isMobileData = connection.type && !connection.type.includes('wifi');
+        
+        if (isSlowConnection || isMobileData) {
+            statusDiv.style.display = 'block';
+            if (isSlowConnection) {
+                statusDiv.style.background = 'rgba(239, 68, 68, 0.9)';
+                statusDiv.style.color = 'white';
+                statusDiv.textContent = '📱 Slow Connection - Optimizing...';
+            } else if (isMobileData) {
+                statusDiv.style.background = 'rgba(245, 158, 11, 0.9)';
+                statusDiv.style.color = 'white';
+                statusDiv.textContent = '📶 Mobile Data - Compressed Images';
+            }
+        } else {
+            statusDiv.style.display = 'none';
+        }
+    }
+    
+    // Add to page
+    document.body.appendChild(statusDiv);
+    
+    // Update on connection change
+    connection.addEventListener('change', updateNetworkStatus);
+    
+    // Initial update
+    updateNetworkStatus();
+    
+    // Auto-hide after 5 seconds
+    setTimeout(() => {
+        statusDiv.style.opacity = '0.7';
+        setTimeout(() => {
+            statusDiv.style.display = 'none';
+        }, 10000);
+    }, 5000);
+}
+
 // Load gallery data from backend
 async function loadGalleryData() {
+    if (galleryInitialized) {
+        console.log('🔄 Gallery already initialized, skipping load');
+        return null;
+    }
+    
     if (!MEMORY_ID) {
         console.warn('No Memory ID found in URL. Using demo mode.');
         return null;
     }
+    
+    galleryInitialized = true; // Mark as initialized
     try {
         // FIX: Use correct API path with /api prefix
         const response = await fetch(`${API_BASE_URL}/api/memory/${MEMORY_ID}`);
@@ -512,9 +638,230 @@ let currentSpotifyUrl = null; // Stores the current Spotify embed URL
 let currentSpotifyTrack = null; // Stores the current Spotify track object
 let STORED_PASSCODE_HASH = null; // Stores the passcode hash from backend
 let IS_PREMIUM = false; // Will be set from backend data
+let galleryInitialized = false; // Prevent duplicate initialization
+
+// Debug mode - set to true to enable verbose logging
+window.debugMode = false; // Set to true for debugging
+
+// Function to toggle debug mode
+window.toggleDebugMode = function() {
+    window.debugMode = !window.debugMode;
+    console.log(`🐛 Debug mode ${window.debugMode ? 'enabled' : 'disabled'}`);
+    return window.debugMode;
+};
+
+// Browser detection and compatibility fixes
+function initBrowserCompatibility() {
+    const userAgent = navigator.userAgent.toLowerCase();
+    const isChrome = userAgent.includes('chrome') && !userAgent.includes('edg') && !userAgent.includes('opr');
+    const isOperaGX = userAgent.includes('opr') || userAgent.includes('opera');
+    const isBrave = navigator.brave && navigator.brave.isBrave; // Brave detection
+    const isFirefox = userAgent.includes('firefox');
+    const isSafari = userAgent.includes('safari') && !userAgent.includes('chrome');
+    const isEdge = userAgent.includes('edge') || userAgent.includes('edg');
+    const isMobile = /android|iphone|ipad|ipod|blackberry|iemobile|opera mini/i.test(userAgent);
+    
+    // Enhanced browser detection including Brave
+    const browserInfo = {
+        isChrome,
+        isOperaGX,
+        isBrave,
+        isFirefox, 
+        isSafari,
+        isEdge,
+        isMobile,
+        userAgent: userAgent.substring(0, 50) + '...'
+    };
+    
+    // Only log in debug mode
+    if (window.debugMode) {
+        console.log('🌐 Enhanced browser detection:', browserInfo);
+    }
+    
+    // Store browser info globally for access elsewhere
+    window.browserInfo = browserInfo;
+    
+    // Check if running in iframe (can affect Opera/Brave)
+    const inIframe = window.self !== window.top;
+    if (inIframe && (browserInfo.isOperaGX || browserInfo.isBrave)) {
+        // Add iframe-specific fixes for Opera/Brave
+        document.documentElement.style.transform = 'translateZ(0)';
+        document.body.style.transform = 'translateZ(0)';
+        
+        if (window.debugMode) {
+            console.log('🖼️ Iframe detected in Opera/Brave - applied iframe fixes');
+        }
+    }
+    
+    // Apply browser-specific fixes
+    if (isOperaGX) {
+        // Opera GX specific optimizations
+        document.documentElement.style.setProperty('--browser-optimization', 'opera-gx');
+        document.documentElement.classList.add('opera-gx');
+        
+        // Fix viewport scaling issues in Opera GX
+        const viewport = document.querySelector('meta[name="viewport"]');
+        if (viewport) {
+            viewport.setAttribute('content', 'width=device-width, initial-scale=1.0, user-scalable=no, shrink-to-fit=no');
+        }
+        
+        // Enhance touch responsiveness for Opera GX
+        document.addEventListener('touchstart', function() {}, { passive: true });
+        
+        // Fix Opera GX specific CSS transform issues
+        const operaStyle = document.createElement('style');
+        operaStyle.textContent = `
+            /* Opera GX Swiper Fixes */
+            .swiper-container {
+                will-change: transform !important;
+                transform: translateZ(0) !important;
+            }
+            .swiper-slide {
+                backface-visibility: hidden !important;
+                transform: translateZ(0) !important;
+            }
+            /* Fix dynamic island positioning in Opera */
+            .dynamic-island {
+                transform: translateZ(0) !important;
+                will-change: transform !important;
+            }
+        `;
+        document.head.appendChild(operaStyle);
+        
+        if (window.debugMode) console.log('🎮 Opera GX optimizations applied');
+    }
+    
+    if (isBrave) {
+        // Brave browser specific optimizations
+        document.documentElement.style.setProperty('--browser-optimization', 'brave');
+        document.documentElement.classList.add('brave');
+        
+        // Brave has strict privacy settings that can interfere with animations
+        const braveStyle = document.createElement('style');
+        braveStyle.textContent = `
+            /* Brave Browser Swiper Fixes */
+            .swiper-container {
+                perspective: 1000px !important;
+                transform-style: preserve-3d !important;
+            }
+            .swiper-slide {
+                transform-style: preserve-3d !important;
+                backface-visibility: hidden !important;
+            }
+            /* Fix dynamic island in Brave */
+            .dynamic-island {
+                transform-style: preserve-3d !important;
+                backface-visibility: hidden !important;
+            }
+            /* Fix potential shield interference */
+            * {
+                -webkit-transform-style: preserve-3d !important;
+                transform-style: preserve-3d !important;
+            }
+        `;
+        document.head.appendChild(braveStyle);
+        
+        // Brave specific touch handling
+        document.addEventListener('touchstart', function() {}, { passive: true });
+        document.addEventListener('touchmove', function() {}, { passive: true });
+        
+        if (window.debugMode) console.log('🛡️ Brave browser optimizations applied');
+    }
+    
+    if (isFirefox) {
+        // Firefox-specific fixes
+        document.documentElement.classList.add('firefox');
+        
+        // Fix backdrop-filter issues in Firefox
+        const style = document.createElement('style');
+        style.textContent = `
+            .modal-overlay {
+                background: rgba(0, 0, 0, 0.95) !important;
+            }
+        `;
+        document.head.appendChild(style);
+        
+        console.log('🦊 Firefox optimizations applied');
+    }
+    
+    if (isSafari) {
+        // Safari-specific fixes
+        document.documentElement.classList.add('safari');
+        
+        // Fix image loading issues in Safari
+        document.addEventListener('DOMContentLoaded', function() {
+            const images = document.querySelectorAll('img');
+            images.forEach(img => {
+                if (!img.loading) {
+                    img.loading = 'lazy';
+                }
+            });
+        });
+        
+        if (window.debugMode) console.log('🍎 Safari optimizations applied');
+    }
+    
+    if (isEdge) {
+        // Edge-specific fixes
+        document.documentElement.classList.add('edge');
+        console.log('🔷 Edge optimizations applied');
+    }
+    
+    // Mobile-specific optimizations
+    if (isMobile) {
+        document.documentElement.classList.add('mobile-browser');
+        
+        // Prevent double-tap zoom
+        let lastTouchEnd = 0;
+        document.addEventListener('touchend', function(event) {
+            const now = (new Date()).getTime();
+            if (now - lastTouchEnd <= 300) {
+                event.preventDefault();
+            }
+            lastTouchEnd = now;
+        }, false);
+        
+        // Optimize scrolling performance
+        document.addEventListener('touchmove', function(e) {
+            if (e.target.closest('.modal-overlay')) {
+                // Allow modal scrolling
+                return;
+            }
+        }, { passive: true });
+        
+        if (window.debugMode) console.log('📱 Mobile browser optimizations applied');
+    }
+}
 
 // Wait for DOM to be fully loaded
 document.addEventListener('DOMContentLoaded', function() {
+    // Initialize browser compatibility fixes
+    initBrowserCompatibility();
+    
+    // Initialize network status indicator
+    initNetworkStatusIndicator();
+    
+    // Register service worker for enhanced mobile performance (disabled for localhost)
+    if ('serviceWorker' in navigator) {
+        // Determine correct service worker path based on environment
+        const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+        
+        if (!isLocalhost) {
+            // Only register service worker in production
+            const swPath = '/SmartLocket/public/sw.js';
+            
+            navigator.serviceWorker.register(swPath)
+                .then(registration => {
+                    console.log('✅ Service Worker registered successfully:', registration.scope);
+                })
+                .catch(error => {
+                    console.log('❌ Service Worker registration failed:', error);
+                });
+        } else {
+            console.log('� Service Worker disabled for local development');
+        }
+    }
+    
     // Don't initialize Swiper immediately - wait for letter animation
     // initializeSwiper();
 });
@@ -528,44 +875,39 @@ function initializeSwiper() {
     
     // Destroy existing swiper instance to prevent conflicts
     if (mainSwiper && typeof mainSwiper.destroy === 'function') {
-        console.log('🔄 Destroying existing Swiper instance');
+        if (window.debugMode) console.log('🔄 Destroying existing Swiper instance');
         mainSwiper.destroy(true, true);
         mainSwiper = null;
     }
     
     swiperWrapper.innerHTML = ''; // Clear everything
     
-    // Debug: Show current state
-    console.log(`📊 Gallery Status:`, {
-        isPremium: IS_PREMIUM,
-        totalMemories: memories.length,
-        favorites: memories.filter(m => m.isFavorite).length,
-        maxImages: MAX_IMAGES
-    });
+    // Debug: Show current state (reduced logging)
+    if (window.debugMode) {
+        console.log(`📊 Gallery Status:`, {
+            isPremium: IS_PREMIUM,
+            totalMemories: memories.length,
+            favorites: memories.filter(m => m.isFavorite).length,
+            maxImages: MAX_IMAGES
+        });
+    }
     
     // For premium users, only show favorite images in slideshow (max 5)
     // For free users, show all images (max 5)
     let slideshowMemories = memories;
     if (IS_PREMIUM) {
         const favoriteMemories = memories.filter(m => m.isFavorite);
-        console.log(`⭐ Found ${favoriteMemories.length} favorites:`, favoriteMemories.map(m => m.title));
         
         if (favoriteMemories.length > 0) {
             slideshowMemories = favoriteMemories.slice(0, MAX_FAVORITES);
-            console.log(`⭐ Premium: Showing ${slideshowMemories.length} favorite images in slideshow`);
         } else {
             // If no favorites selected, show all memories
             slideshowMemories = memories;
-            console.log(`⭐ Premium: No favorites selected, showing all ${slideshowMemories.length} images`);
         }
-    } else {
-        console.log(`👤 Free account: Showing all ${slideshowMemories.length} images`);
     }
     
     // Store slideshow memories globally so we can reference them later
     window.currentSlideshowMemories = slideshowMemories;
-    
-    console.log('🎡 Creating Ferris Wheel with', slideshowMemories.length, 'images');
     
     // Create each memory slide
     slideshowMemories.forEach((memory, index) => {
@@ -588,13 +930,11 @@ function initializeSwiper() {
         `;
         
         swiperWrapper.appendChild(slide);
-        console.log(`✅ Created slide ${index + 1}: ${memory.title}`);
     });
     
-    console.log(`🎡 Total slides created: ${swiperWrapper.children.length}`);
-    
-    // Initialize Swiper
-    mainSwiper = new Swiper('.mainSwiper', {
+    // Browser-specific Swiper configuration adjustments
+    const browserInfo = window.browserInfo || {};
+    let swiperConfig = {
         effect: 'coverflow',
         grabCursor: true,
         centeredSlides: true,
@@ -644,8 +984,26 @@ function initializeSwiper() {
         mousewheel: {
             enabled: true,
             sensitivity: 1,
-        },
-        breakpoints: {
+        }
+    };
+    
+    // Opera and Brave specific optimizations
+    if (browserInfo.isOperaGX || browserInfo.isBrave) {
+        // Reduce animations for better performance in Opera/Brave
+        swiperConfig.speed = 600; // Faster transitions
+        swiperConfig.coverflowEffect.slideShadows = false; // Disable shadows for performance
+        swiperConfig.autoplay.delay = 5000; // Slower autoplay to reduce strain
+        
+        // Disable mousewheel in Opera/Brave to prevent conflicts
+        swiperConfig.mousewheel.enabled = false;
+        
+        if (window.debugMode) {
+            console.log('🔧 Applied Opera/Brave Swiper optimizations');
+        }
+    }
+    
+    // Add breakpoints
+    swiperConfig.breakpoints = {
             320: {
                 slidesPerView: 1.2,
                 spaceBetween: 20,
@@ -653,7 +1011,7 @@ function initializeSwiper() {
                     rotate: 20,
                     depth: 80,
                     modifier: 1,
-                    slideShadows: true,
+                    slideShadows: browserInfo.isOperaGX || browserInfo.isBrave ? false : true,
                 },
             },
             480: {
@@ -663,7 +1021,7 @@ function initializeSwiper() {
                     rotate: 25,
                     depth: 90,
                     modifier: 1,
-                    slideShadows: true,
+                    slideShadows: browserInfo.isOperaGX || browserInfo.isBrave ? false : true,
                 },
             },
             768: {
@@ -673,7 +1031,7 @@ function initializeSwiper() {
                     rotate: 30,
                     depth: 100,
                     modifier: 1,
-                    slideShadows: true,
+                    slideShadows: browserInfo.isOperaGX || browserInfo.isBrave ? false : true,
                 },
             },
             1080: {
@@ -683,11 +1041,13 @@ function initializeSwiper() {
                     rotate: 35,
                     depth: 120,
                     modifier: 1,
-                    slideShadows: true,
+                    slideShadows: browserInfo.isOperaGX || browserInfo.isBrave ? false : true,
                 },
             }
-        },
-        on: {
+        };
+        
+    // Add event handlers
+    swiperConfig.on = {
             slideChange: function() {
                 // Get the real index (accounting for loop mode)
                 const realIndex = this.realIndex;
@@ -696,11 +1056,12 @@ function initializeSwiper() {
                 updateSlideshowCounter();
             },
             init: function() {
-                console.log('🎡 Ferris Wheel initialized with', this.slides.length, 'total slides');
                 updateSlideshowCounter();
             }
-        }
-    });
+        };
+    
+    // Initialize Swiper with optimized configuration
+    mainSwiper = new Swiper('.mainSwiper', swiperConfig);
 
     // Add hover effects to pause/resume autoplay
     const swiperContainer = document.querySelector('.mainSwiper');
@@ -720,10 +1081,13 @@ function initializeSwiper() {
 }
 
 function updateSlideInfo(index) {
-    const slideshowMemories = window.currentSlideshowMemories || memories;
-    const memory = slideshowMemories[index];
-    if (memory) {
-        console.log(`🎡 Viewing: ${memory.title} (${index + 1}/${slideshowMemories.length})`);
+    // Only log if debug mode is enabled
+    if (window.debugMode) {
+        const slideshowMemories = window.currentSlideshowMemories || memories;
+        const memory = slideshowMemories[index];
+        if (memory) {
+            console.log(`🎡 Viewing: ${memory.title} (${index + 1}/${slideshowMemories.length})`);
+        }
     }
 }
 
@@ -869,30 +1233,17 @@ function regenerateSlides() {
 
 // Function to rebuild gallery from loaded memories (from backend)
 function rebuildGalleryFromMemories() {
-    console.log('🔨 Rebuilding gallery from', memories.length, 'memories');
+    console.log(`🔨 Rebuilding gallery with ${memories.length} memories`);
     
     // Update all memory image URLs to use R2 public URL if needed
     memories.forEach((memory, index) => {
-        const originalFullImage = memory.fullImage;
-        const originalThumbnail = memory.thumbnail;
-        
         // Process URLs - getImageUrl handles both full URLs and relative paths
         memory.fullImage = getImageUrl(memory.fullImage);
         memory.thumbnail = getImageUrl(memory.thumbnail || memory.fullImage);
         
-        // Debug logging for first few images
-        if (index < 3) {
-            console.log(`🖼️ Image ${index} URL processing:`, {
-                original: originalFullImage,
-                processed: memory.fullImage,
-                thumbnail: memory.thumbnail
-            });
-        }
-        
-        // Test if image URL is accessible (optional debug)
+        // Test first image accessibility (reduced logging)
         if (index === 0) {
             const testImg = new Image();
-            testImg.onload = () => console.log(`✅ First image URL is accessible: ${memory.fullImage}`);
             testImg.onerror = () => console.error(`❌ First image URL failed to load: ${memory.fullImage} - Check CORS and public access!`);
             testImg.src = memory.fullImage;
         }
@@ -901,8 +1252,6 @@ function rebuildGalleryFromMemories() {
     // Simply reinitialize the swiper with current memories
     // initializeSwiper will handle the favorite filtering for premium users
     initializeSwiper();
-    
-    console.log(`✅ Gallery rebuilt successfully`);
 }
 
 // Control functions for external use
@@ -1432,9 +1781,11 @@ function openForgotPasscodeModal() {
         document.getElementById('forgotStep1').style.display = 'block';
         document.getElementById('forgotStep2').style.display = 'none';
         document.getElementById('forgotStep3').style.display = 'none';
-        document.getElementById('forgotFooter1').style.display = 'flex';
-        document.getElementById('forgotFooter2').style.display = 'none';
-        document.getElementById('forgotFooter3').style.display = 'none';
+        
+        // Reset footer visibility using CSS classes
+        document.getElementById('forgotFooter1').classList.add('active');
+        document.getElementById('forgotFooter2').classList.remove('active');
+        document.getElementById('forgotFooter3').classList.remove('active');
         
         // Clear inputs
         document.getElementById('resetMemoryId').value = MEMORY_ID || '';
@@ -1467,8 +1818,11 @@ function closeForgotPasscodeModal() {
 function backToStep1() {
     document.getElementById('forgotStep1').style.display = 'block';
     document.getElementById('forgotStep2').style.display = 'none';
-    document.getElementById('forgotFooter1').style.display = 'flex';
-    document.getElementById('forgotFooter2').style.display = 'none';
+    
+    // Update footer visibility using CSS classes
+    document.getElementById('forgotFooter1').classList.add('active');
+    document.getElementById('forgotFooter2').classList.remove('active');
+    
     document.getElementById('forgotStep2Error').style.display = 'none';
 }
 
@@ -1520,8 +1874,10 @@ async function sendResetCode() {
             // Move to step 2
             document.getElementById('forgotStep1').style.display = 'none';
             document.getElementById('forgotStep2').style.display = 'block';
-            document.getElementById('forgotFooter1').style.display = 'none';
-            document.getElementById('forgotFooter2').style.display = 'flex';
+            
+            // Update footer visibility using CSS classes
+            document.getElementById('forgotFooter1').classList.remove('active');
+            document.getElementById('forgotFooter2').classList.add('active');
             
             // Focus on verification code input
             setTimeout(() => document.getElementById('verificationCode').focus(), 100);
@@ -1603,8 +1959,10 @@ async function resetPasscode() {
             // Move to success step
             document.getElementById('forgotStep2').style.display = 'none';
             document.getElementById('forgotStep3').style.display = 'block';
-            document.getElementById('forgotFooter2').style.display = 'none';
-            document.getElementById('forgotFooter3').style.display = 'flex';
+            
+            // Update footer visibility using CSS classes
+            document.getElementById('forgotFooter2').classList.remove('active');
+            document.getElementById('forgotFooter3').classList.add('active');
         } else {
             errorDiv.textContent = `❌ ${result.message || 'Failed to reset passcode'}`;
             errorDiv.style.display = 'block';
@@ -1762,8 +2120,8 @@ function updateImageCounter() {
         maxCounter.textContent = maxCount;
     }
     
-    // Log for debugging
-    if (counter || maxCounter) {
+    // Log for debugging only in debug mode
+    if (window.debugMode && (counter || maxCounter)) {
         console.log(`📊 Counter updated: ${memories.length}/${IS_PREMIUM ? MAX_IMAGES_PREMIUM : MAX_IMAGES_FREE} images (Premium: ${IS_PREMIUM})`);
     }
 }
@@ -1897,7 +2255,7 @@ function setupImageUpload() {
     console.log('✅ Image upload setup complete');
 }
 
-// Compress image to reduce size for Cloudflare R2
+// Enhanced image compression with mobile data optimization
 function compressImage(base64Data, maxSizeKB = 70) {
     return new Promise((resolve) => {
         const img = new Image();
@@ -1906,8 +2264,22 @@ function compressImage(base64Data, maxSizeKB = 70) {
             let width = img.width;
             let height = img.height;
             
-            // Calculate new dimensions (max 800px on longest side for maximum compression)
-            const maxDimension = 800;
+            // Detect mobile data connection and adjust compression accordingly
+            const connection = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
+            const isSlowConnection = connection && (connection.effectiveType === 'slow-2g' || connection.effectiveType === '2g');
+            const isMobileData = connection && connection.type && !connection.type.includes('wifi');
+            
+            // Adjust compression based on connection
+            let maxDimension = 800;
+            let targetSize = maxSizeKB;
+            
+            if (isSlowConnection || isMobileData) {
+                maxDimension = 600; // Smaller images for mobile data
+                targetSize = Math.min(maxSizeKB, 50); // Maximum 50KB for mobile data
+                console.log(`📱 Mobile data detected, using aggressive compression: ${maxDimension}px, ${targetSize}KB`);
+            }
+            
+            // Calculate new dimensions
             if (width > height && width > maxDimension) {
                 height = (height * maxDimension) / width;
                 width = maxDimension;
@@ -1920,26 +2292,111 @@ function compressImage(base64Data, maxSizeKB = 70) {
             canvas.height = height;
             
             const ctx = canvas.getContext('2d');
+            
+            // Enable image smoothing for better quality
+            ctx.imageSmoothingEnabled = true;
+            ctx.imageSmoothingQuality = 'high';
+            
             ctx.drawImage(img, 0, 0, width, height);
             
             // Start with lower quality for maximum compression
-            let quality = 0.6;
+            let quality = isSlowConnection || isMobileData ? 0.4 : 0.6;
+            
             let compressedData = canvas.toDataURL('image/jpeg', quality);
             
             // Reduce quality until size is acceptable
-            while (compressedData.length > maxSizeKB * 1024 && quality > 0.1) {
+            while (compressedData.length > targetSize * 1024 && quality > 0.1) {
                 quality -= 0.05;
                 compressedData = canvas.toDataURL('image/jpeg', quality);
             }
             
+            // If still too large, reduce dimensions further for mobile data
+            if (compressedData.length > targetSize * 1024 && (isSlowConnection || isMobileData)) {
+                const newWidth = Math.floor(width * 0.8);
+                const newHeight = Math.floor(height * 0.8);
+                
+                canvas.width = newWidth;
+                canvas.height = newHeight;
+                ctx.drawImage(img, 0, 0, newWidth, newHeight);
+                
+                compressedData = canvas.toDataURL('image/jpeg', quality);
+                console.log(`📱 Further reduced dimensions for mobile: ${newWidth}x${newHeight}`);
+            }
+            
             const originalSizeKB = (base64Data.length / 1024).toFixed(2);
             const compressedSizeKB = (compressedData.length / 1024).toFixed(2);
-            console.log(`📦 Compressed: ${originalSizeKB}KB → ${compressedSizeKB}KB (${quality.toFixed(2)} quality)`);
+            const compressionRatio = ((1 - compressedData.length / base64Data.length) * 100).toFixed(1);
+            
+            console.log(`📦 Compressed: ${originalSizeKB}KB → ${compressedSizeKB}KB (${compressionRatio}% reduction, ${quality.toFixed(2)} quality)`);
             
             resolve(compressedData);
         };
+        
+        img.onerror = function() {
+            console.error('Failed to load image for compression');
+            resolve(base64Data); // Return original if compression fails
+        };
+        
         img.src = base64Data;
     });
+}
+
+// Enhanced upload function with retry logic for mobile data
+async function uploadImageWithRetry(imageData, memoryId, fileName, maxRetries = 3) {
+    const connection = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
+    const isSlowConnection = connection && (connection.effectiveType === 'slow-2g' || connection.effectiveType === '2g');
+    
+    // Adjust timeout based on connection
+    const timeout = isSlowConnection ? 60000 : 30000; // 60s for slow connections, 30s for others
+    
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+        try {
+            console.log(`📤 Upload attempt ${attempt}/${maxRetries} for ${fileName}`);
+            
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), timeout);
+            
+            const response = await fetch(`${API_BASE_URL}/api/upload-image`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    memoryId: memoryId || 'demo',
+                    imageData: imageData,
+                    fileName: fileName
+                }),
+                signal: controller.signal
+            });
+            
+            clearTimeout(timeoutId);
+            
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
+            
+            const result = await response.json();
+            
+            if (!result.success) {
+                throw new Error(result.message || 'Upload failed');
+            }
+            
+            console.log(`✅ Upload successful on attempt ${attempt}: ${result.url}`);
+            return result;
+            
+        } catch (error) {
+            console.error(`❌ Upload attempt ${attempt} failed:`, error.message);
+            
+            if (attempt === maxRetries) {
+                throw new Error(`Upload failed after ${maxRetries} attempts: ${error.message}`);
+            }
+            
+            // Exponential backoff with jitter for mobile connections
+            const delay = Math.min(1000 * Math.pow(2, attempt - 1), 10000) + Math.random() * 1000;
+            console.log(`⏳ Retrying in ${Math.round(delay)}ms...`);
+            await new Promise(resolve => setTimeout(resolve, delay));
+        }
+    }
 }
 
 function handleFileUpload(files) {
@@ -1968,36 +2425,12 @@ function handleFileUpload(files) {
                 const imageData = e.target.result;
                 
                 try {
-                    // Upload image to Cloudflare R2
+                    // Compress image based on connection quality
+                    const compressedData = await compressImage(imageData);
                     console.log(`📤 Uploading ${file.name} to Cloudflare R2...`);
                     
-                    const response = await fetch(`${API_BASE_URL}/api/upload-image`, {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json'
-                        },
-                        body: JSON.stringify({
-                            memoryId: MEMORY_ID || 'demo',
-                            imageData: imageData,
-                            fileName: file.name
-                        })
-                    });
-                    
-                    if (!response.ok) {
-                        const errorText = await response.text();
-                        console.error('❌ Upload response error:', {
-                            status: response.status,
-                            statusText: response.statusText,
-                            body: errorText
-                        });
-                        throw new Error(`Upload failed: ${response.status} - ${errorText}`);
-                    }
-                    
-                    const result = await response.json();
-                    
-                    if (!result.success) {
-                        throw new Error(result.message || 'Upload failed');
-                    }
+                    // Use retry logic for mobile data connections
+                    const result = await uploadImageWithRetry(compressedData, MEMORY_ID, file.name);
                     
                     const imageUrl = result.url;
                     
@@ -2766,7 +3199,7 @@ function getRandomShapeType() {
 
 // Initialize color palette event listeners
 document.addEventListener('DOMContentLoaded', function() {
-    console.log('DOM loaded, initializing...');
+    if (window.debugMode) console.log('DOM loaded, initializing...');
     
     // Load saved theme and colors
     const savedTheme = localStorage.getItem('memorychain-theme') || 'light';
@@ -2787,11 +3220,11 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Try to attach listeners immediately, and also when palette opens
     setTimeout(() => {
-        console.log('⏰ Delayed listener attachment...');
+        if (window.debugMode) console.log('⏰ Delayed listener attachment...');
         attachColorPaletteListeners();
     }, 1000);
     
-    console.log('✅ Initialization complete');
+    if (window.debugMode) console.log('✅ Initialization complete');
     
     // Initialize Spotify player
     loadSavedSpotifyTrack();

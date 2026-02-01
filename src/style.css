@@ -1783,7 +1783,7 @@ footer p {
 
     .image-modal-preview {
         order: -1 !important;
-        margin-bottom: 1rem !important;
+        margin-bottom: 1.5rem !important; /* Increased margin for better spacing */
         width: 100% !important;
         position: relative !important;
     }
@@ -1793,12 +1793,14 @@ footer p {
         border-radius: 12px !important;
         width: 100% !important;
         object-fit: cover !important;
+        margin-bottom: 1rem !important; /* Add margin to separate from content below */
     }
 
     .image-overlay-info {
         top: 0.75rem;
         right: 0.75rem;
         gap: 0.5rem;
+        flex-wrap: wrap !important; /* Allow wrapping on very small screens */
     }
 
     .image-format-badge,
@@ -1806,6 +1808,7 @@ footer p {
         padding: 0.4rem 0.75rem;
         font-size: 0.75rem;
         border-radius: 8px;
+        margin-bottom: 0.25rem !important; /* Add spacing when wrapped */
     }
 
     .image-modal-fields {
@@ -1865,11 +1868,76 @@ footer p {
         padding: 1rem 1.5rem !important;
         font-size: 1rem !important;
         font-weight: 600 !important;
+        border: 2px solid !important;
+        border-radius: 12px !important;
+        min-height: 48px !important; /* Ensure touch-friendly height */
+        position: relative !important; /* Ensure proper positioning */
+        z-index: 100 !important; /* Ensure buttons are above other content */
+    }
+
+    /* Ensure cancel button is always visible and accessible */
+    .image-cancel-btn {
+        background: var(--background-color) !important;
+        color: var(--text-color) !important;
+        border-color: var(--border-color) !important;
+    }
+
+    .image-cancel-btn:hover,
+    .image-cancel-btn:focus,
+    .image-cancel-btn:active {
+        background: var(--surface-color) !important;
+        border-color: var(--primary-color) !important;
+        transform: translateY(-1px) !important;
+    }
+
+    /* Fix modal footer to prevent button overlap */
+    .modal-footer {
+        padding: 1.5rem !important;
+        margin-top: 1rem !important;
+        border-top: 2px solid var(--border-color) !important;
+        background: var(--background-color) !important;
+        position: sticky !important;
+        bottom: 0 !important;
+        z-index: 1000 !important;
     }
 
     .field-hint {
         font-size: 0.85rem;
         margin-top: 0.4rem;
+    }
+}
+
+/* iPhone 13 and similar devices specific fixes */
+@media (max-width: 428px) and (-webkit-device-pixel-ratio: 3) {
+    .image-modal-body {
+        padding-bottom: 2rem !important; /* Extra space for iPhone */
+    }
+    
+    .image-field-actions {
+        padding-bottom: 1rem !important; /* Ensure buttons don't get cut off */
+        margin-bottom: 1rem !important;
+    }
+
+    .image-cancel-btn,
+    .image-save-btn {
+        font-size: 1.1rem !important; /* Slightly larger for better touch */
+        padding: 1.1rem 1.5rem !important;
+        min-height: 52px !important; /* Larger touch target */
+    }
+    
+    /* Fix image overlay on iPhone 13 */
+    .image-overlay-info {
+        position: absolute !important;
+        top: 0.5rem !important;
+        right: 0.5rem !important;
+        flex-direction: column !important;
+        align-items: flex-end !important;
+    }
+    
+    .image-format-badge,
+    .image-size-info {
+        margin-bottom: 0.5rem !important;
+        font-size: 0.7rem !important;
     }
 }
 
@@ -1892,15 +1960,207 @@ html {
     outline-offset: 4px;
 }
 
-/* Performance Optimizations */
+/* Performance Optimizations & Browser Compatibility */
 .mainSwiper .swiper-slide {
     will-change: transform;
     backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
+    -moz-backface-visibility: hidden;
+    -ms-backface-visibility: hidden;
+    transform: translateZ(0); /* Force hardware acceleration */
+    -webkit-transform: translateZ(0);
+    -moz-transform: translateZ(0);
+    -ms-transform: translateZ(0);
 }
 
 .slide-content img {
     will-change: transform;
     backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
+    -moz-backface-visibility: hidden;
+    -ms-backface-visibility: hidden;
+    transform: translateZ(0);
+    -webkit-transform: translateZ(0);
+    -moz-transform: translateZ(0);
+    -ms-transform: translateZ(0);
+}
+
+/* Browser-specific optimizations */
+/* Opera GX and Chromium-based browsers */
+@supports (-webkit-touch-callout: none) {
+    .upload-zone {
+        -webkit-user-select: none;
+        -webkit-touch-callout: none;
+        user-select: none;
+    }
+    
+    .swiper-slide {
+        -webkit-transform: translate3d(0, 0, 0);
+        transform: translate3d(0, 0, 0);
+    }
+}
+
+/* Firefox optimizations */
+@-moz-document url-prefix() {
+    .modal-overlay {
+        scrollbar-width: thin;
+        scrollbar-color: var(--primary-color) var(--surface-color);
+    }
+    
+    .image-modal-body {
+        scrollbar-width: thin;
+    }
+}
+
+/* Edge and IE compatibility */
+@supports (-ms-ime-align: auto) {
+    .image-modal {
+        -ms-overflow-style: -ms-autohiding-scrollbar;
+    }
+}
+
+/* WebKit browsers (Safari, Chrome, Opera) */
+::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: var(--surface-color);
+    border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb {
+    background: var(--primary-color);
+    border-radius: 4px;
+    border: 1px solid var(--surface-color);
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: var(--secondary-color);
+}
+
+/* Cross-browser focus improvements */
+.image-cancel-btn:focus-visible,
+.image-save-btn:focus-visible,
+.upload-btn:focus-visible {
+    outline: 3px solid var(--primary-color);
+    outline-offset: 2px;
+    box-shadow: 0 0 0 3px rgba(var(--primary-color-rgb, 37, 99, 235), 0.2);
+}
+
+/* Disable default focus styles in favor of custom ones */
+.image-cancel-btn:focus:not(:focus-visible),
+.image-save-btn:focus:not(:focus-visible),
+.upload-btn:focus:not(:focus-visible) {
+    outline: none;
+}
+
+/* Enhanced touch support for all browsers */
+.image-cancel-btn,
+.image-save-btn,
+.upload-btn,
+.swiper-button-next,
+.swiper-button-prev {
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+}
+
+/* Browser-specific CSS classes for targeted fixes */
+.firefox .modal-overlay {
+    backdrop-filter: none !important;
+    background: rgba(0, 0, 0, 0.95) !important;
+}
+
+.safari .image-modal {
+    -webkit-overflow-scrolling: touch;
+}
+
+/* Enhanced Opera GX and Brave fixes */
+.opera-gx .swiper-slide,
+.brave .swiper-slide,
+.edge .swiper-slide {
+    transform: translate3d(0, 0, 0) !important;
+    will-change: transform !important;
+    backface-visibility: hidden !important;
+}
+
+.opera-gx .swiper-container,
+.brave .swiper-container {
+    perspective: 1200px !important;
+    transform-style: preserve-3d !important;
+}
+
+/* Fix Opera GX/Brave dynamic island positioning */
+.opera-gx .dynamic-island,
+.brave .dynamic-island {
+    transform: translateZ(0) !important;
+    will-change: transform, opacity !important;
+    backface-visibility: hidden !important;
+}
+
+/* Disable problematic animations in Opera/Brave */
+.opera-gx .swiper-slide-shadow,
+.brave .swiper-slide-shadow {
+    display: none !important;
+}
+
+.opera-gx .swiper-slide-shadow-left,
+.opera-gx .swiper-slide-shadow-right,
+.brave .swiper-slide-shadow-left,
+.brave .swiper-slide-shadow-right {
+    display: none !important;
+}
+
+/* Fix Opera GX specific rendering issues */
+.opera-gx .mainSwiper,
+.brave .mainSwiper {
+    transform: translateZ(0) !important;
+    overflow: visible !important;
+}
+
+.opera-gx .swiper-wrapper,
+.brave .swiper-wrapper {
+    transform-style: preserve-3d !important;
+    backface-visibility: hidden !important;
+}
+
+.mobile-browser .image-modal-body {
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
+}
+
+.mobile-browser .upload-zone {
+    -webkit-user-select: none;
+    user-select: none;
+}
+
+/* Fix for Opera GX viewport issues */
+html[data-browser-optimization="opera-gx"] {
+    -webkit-text-size-adjust: 100%;
+    -ms-text-size-adjust: 100%;
+}
+
+/* Additional mobile browser fixes */
+@media (max-width: 768px) {
+    .mobile-browser .image-modal {
+        height: 100vh !important;
+        max-height: 100vh !important;
+        border-radius: 0 !important;
+    }
+    
+    .mobile-browser .image-modal-body {
+        max-height: calc(100vh - 140px) !important;
+        padding-bottom: env(safe-area-inset-bottom) !important;
+    }
+    
+    .mobile-browser .modal-footer {
+        padding-bottom: calc(1.5rem + env(safe-area-inset-bottom)) !important;
+    }
 }
 
 /* Image Upload Area */
@@ -2455,6 +2715,94 @@ html {
 .modal-overlay.active {
     opacity: 1 !important;
     visibility: visible !important;
+    z-index: 999999 !important;
+}
+
+/* Passcode Modal Specific Fixes */
+#passcodeModal .modal-footer {
+    padding: 1.5rem !important;
+    background: var(--background-color) !important;
+    border-top: 2px solid var(--border-color) !important;
+    position: relative !important;
+    z-index: 1000 !important;
+    display: flex !important;
+    gap: 1rem !important;
+    justify-content: space-between !important;
+    flex-wrap: wrap !important;
+}
+
+/* Forgot passcode modal footer visibility control */
+#forgotPasscodeModal .modal-footer {
+    padding: 1.5rem !important;
+    background: var(--background-color) !important;
+    border-top: 2px solid var(--border-color) !important;
+    position: relative !important;
+    z-index: 1000 !important;
+    gap: 1rem !important;
+    justify-content: space-between !important;
+    flex-wrap: wrap !important;
+    display: none !important; /* Hidden by default */
+}
+
+/* Show only the active footer */
+#forgotPasscodeModal .modal-footer.active {
+    display: flex !important;
+}
+
+/* Enhanced button styling for better visibility */
+#passcodeModal .image-cancel-btn,
+#passcodeModal .image-save-btn,
+#forgotPasscodeModal .image-cancel-btn,
+#forgotPasscodeModal .image-save-btn {
+    min-height: 48px !important;
+    padding: 0.75rem 1.5rem !important;
+    font-size: 1rem !important;
+    font-weight: 600 !important;
+    border-radius: 12px !important;
+    border: 2px solid !important;
+    cursor: pointer !important;
+    transition: all 0.3s ease !important;
+    position: relative !important;
+    z-index: 1001 !important;
+    background: var(--background-color) !important;
+    color: var(--text-color) !important;
+    flex: 1 !important;
+    min-width: 120px !important;
+}
+
+/* Specific cancel button styling */
+#passcodeModal .image-cancel-btn,
+#forgotPasscodeModal .image-cancel-btn {
+    border-color: var(--text-secondary) !important;
+    background: var(--surface-color) !important;
+    color: var(--text-color) !important;
+}
+
+#passcodeModal .image-cancel-btn:hover,
+#passcodeModal .image-cancel-btn:focus,
+#forgotPasscodeModal .image-cancel-btn:hover,
+#forgotPasscodeModal .image-cancel-btn:focus {
+    border-color: var(--primary-color) !important;
+    background: var(--background-color) !important;
+    transform: translateY(-2px) !important;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
+}
+
+/* Save button styling */
+#passcodeModal .image-save-btn,
+#forgotPasscodeModal .image-save-btn {
+    border-color: var(--primary-color) !important;
+    background: var(--primary-color) !important;
+    color: white !important;
+}
+
+#passcodeModal .image-save-btn:hover,
+#passcodeModal .image-save-btn:focus,
+#forgotPasscodeModal .image-save-btn:hover,
+#forgotPasscodeModal .image-save-btn:focus {
+    background: var(--secondary-color) !important;
+    transform: translateY(-2px) !important;
+    box-shadow: 0 6px 18px rgba(var(--primary-color-rgb, 37, 99, 235), 0.4) !important;
 }
 
 .edit-modal {
