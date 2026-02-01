@@ -109,9 +109,10 @@
     </div>
 
     <script src="../src/config.js"></script>
-    <script src="../src/script.js"></script>
+    <script src="../src/activate-script.js"></script>
     <script>
         // API_BASE_URL is already defined in config.js, no need to redeclare
+        console.log('🔍 ACTIVATION PAGE: Starting to load, API_BASE_URL:', window.API_BASE_URL);
         
         // Get Memory ID using the shared function from script.js
         const memoryId = getMemoryIdFromURL();
@@ -125,9 +126,12 @@
         
         // Wait for DOM to be ready before setting the display
         document.addEventListener('DOMContentLoaded', function() {
+            console.log('🔍 ACTIVATION PAGE: DOM loaded');
             const displayElement = document.getElementById('memoryIdDisplay');
             if (displayElement) {
                 displayElement.textContent = memoryId || 'INVALID';
+            } else {
+                console.error('🔍 ACTIVATION PAGE: memoryIdDisplay element not found');
             }
         });
 
@@ -366,8 +370,19 @@
             }
         }
 
-        // Check on page load
-        checkActivationStatus();
+        // Don't automatically check status on page load for new activations
+        // checkActivationStatus(); // Commented out to prevent redirect loops
+        
+        // Add error handler to catch any unhandled errors
+        window.addEventListener('error', function(e) {
+            console.error('🔍 ACTIVATION PAGE: Unhandled error:', e.error);
+        });
+        
+        window.addEventListener('unhandledrejection', function(e) {
+            console.error('🔍 ACTIVATION PAGE: Unhandled promise rejection:', e.reason);
+        });
+        
+        console.log('🔍 ACTIVATION PAGE: Script fully loaded');
     </script>
 </body>
 </html>
