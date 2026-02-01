@@ -6,10 +6,11 @@ const cors = require("cors");
 const admin = require("firebase-admin");
 const bcrypt = require("bcryptjs"); // Add bcrypt import
 const nodemailer = require("nodemailer");
-const {S3Client} = require("@aws-sdk/client-s3");
+// Temporarily disable R2 for Firebase Functions deployment
+// const {S3Client} = require("@aws-sdk/client-s3");
 
 // Import shared routes
-const {setupRoutes} = require("../shared/routes");
+const {setupRoutes} = require("./shared/routes");
 
 // Load environment variables for local development
 require("dotenv").config();
@@ -27,16 +28,17 @@ if (!admin.apps.length) {
 const db = admin.firestore();
 
 // --------------------
-// Cloudflare R2
+// Cloudflare R2 (Disabled for Firebase Functions)
 // --------------------
-const r2Client = new S3Client({
-  region: "auto", 
-  endpoint: process.env.R2_ENDPOINT || "https://cfb74f6c6f03ae746b61558cfd98e44d.r2.cloudflarestorage.com",
-  credentials: {
-    accessKeyId: process.env.R2_ACCESS_KEY_ID || "81856ac44c6c8a46b7207b5cd68b4740",
-    secretAccessKey: process.env.R2_SECRET_ACCESS_KEY || "20792b08b4598bdc215658f5962a2e06f5b73c60f925834a0d7beabe64ff7bae",
-  },
-});
+// const r2Client = new S3Client({
+//   region: "auto", 
+//   endpoint: process.env.R2_ENDPOINT || "https://cfb74f6c6f03ae746b61558cfd98e44d.r2.cloudflarestorage.com",
+//   credentials: {
+//     accessKeyId: process.env.R2_ACCESS_KEY_ID || "81856ac44c6c8a46b7207b5cd68b4740",
+//     secretAccessKey: process.env.R2_SECRET_ACCESS_KEY || "20792b08b4598bdc215658f5962a2e06f5b73c60f925834a0d7beabe64ff7bae",
+//   },
+// });
+const r2Client = null; // Disable R2 for Firebase Functions
 
 // --------------------
 // Mailer

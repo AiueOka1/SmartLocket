@@ -243,7 +243,7 @@
                         }
                         if (countdown <= 0) {
                             clearInterval(countdownInterval);
-                            window.location.href = `/gallery.html?id=${memoryId}`;
+                            window.location.href = `/SmartLocket/public/gallery.html?id=${memoryId}`;
                         }
                     }, 1000);
                 } else {
@@ -362,7 +362,7 @@
 
                 if (data.status === 'activated') {
                     // Already activated, redirect to gallery
-                    window.location.href = `/gallery.html?id=${memoryId}`;
+                    window.location.href = `/SmartLocket/public/gallery.html?id=${memoryId}`;
                 }
             } catch (error) {
                 console.error('Error checking activation status:', error);
