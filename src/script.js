@@ -42,20 +42,27 @@ function getImageUrl(filename) {
 
 // API Base URL
 // Local: talks directly to Express on port 3000 (which serves /api/*)
-// Production: talks to the deployed Cloud Function named "api"
-// We keep `/api` in the base URL, and use route paths *without* an extra `/api` prefix.
-const API_BASE_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
-    ? 'http://localhost:3000'
-    : 'https://api-vcdrn5osga-uc.a.run.app/api';
+// API_BASE_URL is now defined in config.js - no need to redefine here
 
 // Get Memory ID from URL
 function getMemoryIdFromURL() {
     // Check URL patterns: /m/MEMORYID or ?id=MEMORYID
-    const pathParts = window.location.pathname.split('/');
-    const memoryIdFromPath = pathParts[pathParts.length - 1];
     const urlParams = new URLSearchParams(window.location.search);
     const memoryIdFromQuery = urlParams.get('id');
-    return memoryIdFromPath && memoryIdFromPath !== 'gallery.html' && memoryIdFromPath !== '' 
+    
+    // If we have a query param, use that (for activate.html?id=MEMORYID)
+    if (memoryIdFromQuery && memoryIdFromQuery !== 'activate.html') {
+        return memoryIdFromQuery;
+    }
+    
+    // Otherwise check path parts
+    const pathParts = window.location.pathname.split('/');
+    const memoryIdFromPath = pathParts[pathParts.length - 1];
+    
+    // Return path ID only if it's not a filename
+    return memoryIdFromPath && 
+           !memoryIdFromPath.includes('.html') && 
+           memoryIdFromPath !== '' 
         ? memoryIdFromPath 
         : memoryIdFromQuery;
 }
@@ -70,8 +77,8 @@ async function loadGalleryData() {
         return null;
     }
     try {
-        // FIX: Remove extra /api from fetch URL
-        const response = await fetch(`${API_BASE_URL}/memory/${MEMORY_ID}`);
+        // FIX: Use correct API path with /api prefix
+        const response = await fetch(`${API_BASE_URL}/api/memory/${MEMORY_ID}`);
         if (!response.ok) {
             if (response.status === 404) {
                 // NFCchain not found - redirect to activation
@@ -163,7 +170,7 @@ async function saveGalleryData(galleryData) {
         return;
     }
     try {
-        const response = await fetch(`${API_BASE_URL}/memory/${MEMORY_ID}`, {
+        const response = await fetch(`${API_BASE_URL}/api/memory/${MEMORY_ID}`, {
             method: 'PUT',
             headers: {
                 'Content-Type': 'application/json'
@@ -186,20 +193,25 @@ async function saveGalleryData(galleryData) {
 
 // Initialize envelope and letter functionality
 document.addEventListener('DOMContentLoaded', async function() {
-    // Show loading state while checking Memory ID
-    if (MEMORY_ID) {
-        document.body.style.opacity = '0.5';
-        console.log('Loading NFCchain:', MEMORY_ID);
-    }
-    // Load gallery data first (will redirect if not activated)
-    const galleryData = await loadGalleryData();
-    // If we got here, the NFCchain is activated
+    try {
+        // Show loading state while checking Memory ID
+        if (MEMORY_ID) {
+            document.body.style.opacity = '0.5';
+            console.log('Loading NFCchain:', MEMORY_ID);
+        }
+        // Load gallery data first (will redirect if not activated)
+        const galleryData = await loadGalleryData();
+        
+        // If we got here, the NFCchain is activated
     if (galleryData) {
         // Remove loading state
         document.body.style.opacity = '1';
         // Apply loaded data to the page
         if (galleryData.galleryTitle) {
-            document.getElementById('galleryTitle').textContent = galleryData.galleryTitle;
+            const galleryTitle = document.getElementById('galleryTitle');
+            if (galleryTitle) {
+                galleryTitle.textContent = galleryData.galleryTitle;
+            }
         }
         // Load letter content
         if (galleryData.letterContent) {
@@ -398,6 +410,14 @@ document.addEventListener('DOMContentLoaded', async function() {
             }, 200);
         }
     });
+
+    } catch (error) {
+        console.error('DOMContentLoaded error:', error);
+        // Ensure loading state is removed even if there's an error
+        if (document.body) {
+            document.body.style.opacity = '1';
+        }
+    }
 });
 
 // ========================================
@@ -1116,7 +1136,7 @@ async function saveAllChangesToBackend() {
         });
 
         // Send to backend
-        const response = await fetch(`${API_BASE_URL}/memory/${MEMORY_ID}`, {
+        const response = await fetch(`${API_BASE_URL}/api/memory/${MEMORY_ID}`, {
             method: 'PUT',
             headers: {
                 'Content-Type': 'application/json'
@@ -1202,10 +1222,18 @@ async function hashPasscode(passcode) {
 }
 
 async function verifyPasscode(inputPasscode, storedHash) {
+    console.log('🔐 verifyPasscode called:', {
+        hasInputPasscode: !!inputPasscode,
+        hasStoredHash: !!storedHash,
+        hashType: storedHash?.substring(0, 3)
+    });
+    
     // For bcrypt hashes (starting with $2a$ or $2b$), we need to send to backend
     if (storedHash && storedHash.startsWith('$2')) {
+        console.log('🔐 Using backend verification for bcrypt hash');
         try {
-            const response = await fetch(`${API_BASE_URL}/verify-passcode`, {
+            console.log('🔐 Making API call to verify-passcode...');
+            const response = await fetch(`${API_BASE_URL}/api/verify-passcode`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -1214,11 +1242,15 @@ async function verifyPasscode(inputPasscode, storedHash) {
                 })
             });
             
+            console.log('🔐 API response status:', response.status);
+            
             if (!response.ok) {
+                console.error('🔐 API response not OK:', response.status);
                 return false;
             }
             
             const result = await response.json();
+            console.log('🔐 API response result:', result);
             return result.valid === true;
         } catch (error) {
             console.error('Passcode verification error:', error);
@@ -1226,17 +1258,20 @@ async function verifyPasscode(inputPasscode, storedHash) {
         }
     }
     
+    console.log('🔐 Using local SHA-256 verification');
     // For simple SHA-256 hashes (fallback for demo mode)
     const inputHash = await hashPasscode(inputPasscode);
     return inputHash === storedHash;
 }
 
 function openPasscodeModal() {
+    console.log('🔐 openPasscodeModal called');
     const modal = document.getElementById('passcodeModal');
     const input = document.getElementById('passcodeInput');
     const error = document.getElementById('passcodeError');
     
     if (modal) {
+        console.log('🔐 Passcode modal found, opening...');
         // Clear previous input and errors
         if (input) input.value = '';
         if (error) error.style.display = 'none';
@@ -1246,12 +1281,16 @@ function openPasscodeModal() {
         setTimeout(() => {
             modal.classList.add('active');
             if (input) input.focus();
+            console.log('🔐 Passcode modal should now be visible');
         }, 10);
         
-        // Add Enter key listener
+        // Remove any existing Enter key listener first
         if (input) {
+            input.removeEventListener('keypress', handlePasscodeEnter);
             input.addEventListener('keypress', handlePasscodeEnter);
         }
+    } else {
+        console.error('❌ Passcode modal not found!');
     }
 }
 
@@ -1279,89 +1318,87 @@ function handlePasscodeEnter(event) {
     }
 }
 
+// Check if passcode session is still valid
+function isPasscodeSessionValid() {
+    const valid = window.passcodeSessionValid && 
+                 window.passcodeSessionExpiry && 
+                 Date.now() < window.passcodeSessionExpiry;
+    
+    console.log('🕐 Session check:', {
+        passcodeSessionValid: window.passcodeSessionValid,
+        passcodeSessionExpiry: window.passcodeSessionExpiry,
+        currentTime: Date.now(),
+        isExpired: window.passcodeSessionExpiry ? Date.now() >= window.passcodeSessionExpiry : 'no expiry',
+        result: valid,
+        timeRemaining: window.passcodeSessionExpiry ? Math.round((window.passcodeSessionExpiry - Date.now()) / 1000) : 'no expiry'
+    });
+    
+    return valid;
+}
+
 async function verifyPasscodeAndEnterEditMode() {
-    const input = document.getElementById('passcodeInput');
-    const error = document.getElementById('passcodeError');
-    const passcode = input?.value?.trim();
-    
-    // Validate input
-    if (!passcode || passcode.length !== 6) {
-        if (error) {
-            error.textContent = '❌ Please enter a 6-digit passcode';
-            error.style.display = 'block';
-        }
-        return;
-    }
-    
-    // Show loading state
-    const unlockBtn = document.querySelector('#passcodeModal .image-save-btn');
-    const originalText = unlockBtn?.innerHTML;
-    if (unlockBtn) {
-        unlockBtn.disabled = true;
-        unlockBtn.innerHTML = '<span style="animation: spin 1s linear infinite;">⏳</span> Verifying...';
-    }
-    
     try {
-        // Verify passcode
+        console.log('🔐🔐🔐 verifyPasscodeAndEnterEditMode ACTUALLY CALLED!');
+        console.log('🔐 Function started - checking inputs...');
+        
+        const input = document.getElementById('passcodeInput');
+        const error = document.getElementById('passcodeError');
+        const passcode = input?.value?.trim();
+        
+        console.log('🔐 Got input elements:', { input: !!input, error: !!error, passcode: passcode });
+        
+        // Simple validation
+        if (!passcode || passcode.length !== 6) {
+            console.log('❌ Invalid passcode length:', passcode?.length);
+            if (error) {
+                error.textContent = '❌ Please enter a 6-digit passcode';
+                error.style.display = 'block';
+            }
+            return;
+        }
+        
+        console.log('✅ About to verify passcode...');
+        
+        // Simple password check - if password matches, grant access
         const isValid = await verifyPasscode(passcode, STORED_PASSCODE_HASH);
         
+        console.log('🔐 Passcode verification result:', isValid);
+        
         if (isValid) {
-            console.log('✅ Passcode verified successfully');
+            console.log('✅ Password correct - granting access');
             
-            // Close modal
+            // Set temporary session bypass for 5 minutes
+            window.passcodeSessionValid = true;
+            window.passcodeSessionExpiry = Date.now() + (5 * 60 * 1000); // 5 minutes
+            
+            // Close the passcode modal
             closePasscodeModal();
             
-            // Check if there's a pending Spotify action
-            if (window.pendingSpotifyAction) {
-                const action = window.pendingSpotifyAction;
-                window.pendingSpotifyAction = null; // Clear the pending action
-                
-                if (action === 'open') {
-                    // Temporarily allow the action
-                    isEditMode = true;
-                    openSpotifyModal();
-                    isEditMode = false;
-                } else if (action === 'clear') {
-                    // Temporarily allow the action
-                    isEditMode = true;
-                    clearSpotifyTrack();
-                    isEditMode = false;
-                }
-                
-                showNotification('🔓 Access granted!', 'success');
+            // Check what the user wanted to do
+            if (window.pendingSpotifyAction === 'open') {
+                console.log('🎵 Opening Spotify modal');
+                window.pendingSpotifyAction = null;
+                setTimeout(() => openSpotifyModal(true), 100);
+            } else if (window.pendingSpotifyAction === 'clear') {
+                console.log('🎵 Clearing Spotify');
+                window.pendingSpotifyAction = null;
+                setTimeout(() => clearSpotifyTrack(true), 100);
             } else {
-                // Enter edit mode (original behavior)
+                console.log('🔐 Entering edit mode');
                 enterEditMode();
-                showNotification('🔓 Edit mode unlocked!', 'success');
             }
-        } else {
-            console.log('❌ Incorrect passcode');
             
-            // Show error
+            showNotification('🔓 Access granted!', 'success');
+        } else {
+            console.log('❌ Wrong password');
             if (error) {
                 error.textContent = '❌ Incorrect passcode. Please try again.';
                 error.style.display = 'block';
             }
-            
-            // Clear input and focus
-            if (input) {
-                input.value = '';
-                input.focus();
-            }
+            input.value = '';
         }
-    } catch (error) {
-        console.error('Passcode verification error:', error);
-        
-        if (error) {
-            error.textContent = '❌ Verification failed. Please try again.';
-            error.style.display = 'block';
-        }
-    } finally {
-        // Restore button
-        if (unlockBtn) {
-            unlockBtn.disabled = false;
-            unlockBtn.innerHTML = originalText;
-        }
+    } catch (err) {
+        console.error('🚨 ERROR in verifyPasscodeAndEnterEditMode:', err);
     }
 }
 
@@ -1457,7 +1494,7 @@ async function sendResetCode() {
         showNotification('📧 Sending verification code...', 'info');
         
         // Send request to backend
-        const response = await fetch(`${API_BASE_URL}/memory/request-reset`, {
+        const response = await fetch(`${API_BASE_URL}/api/memory/request-reset`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ memoryId, email })
@@ -1535,7 +1572,7 @@ async function resetPasscode() {
         showNotification('🔄 Resetting passcode...', 'info');
         
         // Send request to backend
-        const response = await fetch(`${API_BASE_URL}/memory/reset-passcode`, {
+        const response = await fetch(`${API_BASE_URL}/api/memory/reset-passcode`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -1851,7 +1888,7 @@ function setupImageUpload() {
     console.log('✅ Image upload setup complete');
 }
 
-// Compress image to reduce size for Firebase
+// Compress image to reduce size for Cloudflare R2
 function compressImage(base64Data, maxSizeKB = 70) {
     return new Promise((resolve) => {
         const img = new Image();
@@ -1912,7 +1949,7 @@ function handleFileUpload(files) {
     
     let processedCount = 0;
     
-    // Process each file - upload to Firebase Storage
+    // Process each file - upload to Cloudflare R2
     for (let i = 0; i < filesToProcess; i++) {
         const file = files[i];
         if (file && file.type.startsWith('image/')) {
@@ -1922,10 +1959,10 @@ function handleFileUpload(files) {
                 const imageData = e.target.result;
                 
                 try {
-                    // Upload image to Firebase Storage
-                    console.log(`� Uploading ${file.name} to Firebase Storage...`);
+                    // Upload image to Cloudflare R2
+                    console.log(`📤 Uploading ${file.name} to Cloudflare R2...`);
                     
-                    const response = await fetch(`${API_BASE_URL}/upload-image`, {
+                    const response = await fetch(`${API_BASE_URL}/api/upload-image`, {
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json'
@@ -1938,14 +1975,24 @@ function handleFileUpload(files) {
                     });
                     
                     if (!response.ok) {
-                        const errorData = await response.json();
-                        throw new Error(errorData.message || 'Failed to upload image');
+                        const errorText = await response.text();
+                        console.error('❌ Upload response error:', {
+                            status: response.status,
+                            statusText: response.statusText,
+                            body: errorText
+                        });
+                        throw new Error(`Upload failed: ${response.status} - ${errorText}`);
                     }
                     
                     const result = await response.json();
+                    
+                    if (!result.success) {
+                        throw new Error(result.message || 'Upload failed');
+                    }
+                    
                     const imageUrl = result.url;
                     
-                    console.log(`✅ Image uploaded to Storage: ${imageUrl}`);
+                    console.log(`✅ Image uploaded to Cloudflare R2: ${imageUrl}`);
                     
                     // Create new memory object with URL instead of base64
                     const newMemory = {
@@ -1981,7 +2028,7 @@ function handleFileUpload(files) {
                         showNotification(`✅ ${filesToProcess} image${filesToProcess > 1 ? 's' : ''} uploaded successfully!`, 'success');
                     }
                 } catch (error) {
-                    console.error('❌ Error uploading to Firebase Storage:', error);
+                    console.error('❌ Error uploading to Cloudflare R2:', error);
                     showNotification(`❌ Failed to upload ${file.name}: ${error.message}`, 'error');
                     processedCount++;
                 }
@@ -2153,12 +2200,12 @@ async function deleteImage(index) {
     if (confirm('Are you sure you want to remove this image?')) {
         const memory = memories[index];
         
-        // Delete from Firebase Storage if it has a fileName
+        // Delete from Cloudflare R2 if it has a fileName
         if (memory.fileName) {
             try {
-                console.log(`🗑️ Deleting from Firebase Storage: ${memory.fileName}`);
+                console.log(`🗑️ Deleting from Cloudflare R2: ${memory.fileName}`);
                 
-                const response = await fetch(`${API_BASE_URL}/delete-image`, {
+                const response = await fetch(`${API_BASE_URL}/api/delete-image`, {
                     method: 'DELETE',
                     headers: {
                         'Content-Type': 'application/json'
@@ -2169,13 +2216,13 @@ async function deleteImage(index) {
                 });
                 
                 if (response.ok) {
-                    console.log(`✅ Image deleted from Storage`);
+                    console.log(`✅ Image deleted from R2 Storage`);
                 } else {
-                    console.warn(`⚠️ Failed to delete from Storage (image may not exist)`);
+                    console.warn(`⚠️ Failed to delete from R2 Storage (image may not exist)`);
                 }
             } catch (error) {
-                console.error('❌ Error deleting from Storage:', error);
-                // Continue with deletion even if Storage delete fails
+                console.error('❌ Error deleting from R2 Storage:', error);
+                // Continue with deletion even if R2 delete fails
             }
         }
         
@@ -2750,12 +2797,15 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
     
-    // Close edit overlay when clicking outside
-    document.getElementById('editOverlay').addEventListener('click', function(e) {
-        if (e.target === this) {
-            exitEditMode();
-        }
-    });
+    // Close edit overlay when clicking outside (only if element exists)
+    const editOverlay = document.getElementById('editOverlay');
+    if (editOverlay) {
+        editOverlay.addEventListener('click', function(e) {
+            if (e.target === this) {
+                exitEditMode();
+            }
+        });
+    }
     
     // Close color palette when clicking outside
     document.addEventListener('click', function(e) {
@@ -2776,7 +2826,10 @@ document.addEventListener('DOMContentLoaded', function() {
     // Load saved gallery title
     const savedTitle = localStorage.getItem('memorychain-gallery-title');
     if (savedTitle) {
-        document.getElementById('galleryTitle').textContent = savedTitle;
+        const galleryTitle = document.getElementById('galleryTitle');
+        if (galleryTitle) {
+            galleryTitle.textContent = savedTitle;
+        }
     }
 });
 
@@ -2865,75 +2918,18 @@ function saveHeaderTitle() {
 }
 
 function onEditClick() {
-  openPasscodeModal();
-}
-
-async function verifyPasscodeAndEnterEditMode() {
-  const input = document.getElementById('passcodeInput');
-  const error = document.getElementById('passcodeError');
-  const passcode = input?.value?.trim();
-
-  // Validate input
-  if (!passcode || passcode.length !== 6) {
-    if (error) {
-      error.textContent = "Please enter a 6-digit passcode.";
-      error.style.display = "block";
-    }
-    return;
-  }
-
-  // Show loading state
-  const unlockBtn = document.querySelector('#passcodeModal .image-save-btn');
-  const originalText = unlockBtn?.innerHTML;
-  if (unlockBtn) {
-    unlockBtn.innerHTML = "Verifying...";
-    unlockBtn.disabled = true;
-  }
-
-  try {
-    // Call backend to verify passcode
-    const response = await fetch(`${API_BASE_URL}/verify-passcode`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ memoryId: MEMORY_ID, passcode })
-    });
-    const result = await response.json();
-
-    if (result.valid) {
-      if (error) error.style.display = "none";
-      closePasscodeModal();
-      // Handle Spotify actions if needed
-      if (window.pendingSpotifyAction === 'open') {
-        window.pendingSpotifyAction = null;
-        openSpotifyModal();
-      } else if (window.pendingSpotifyAction === 'clear') {
-        window.pendingSpotifyAction = null;
-        clearSpotifyTrack();
-      } else {
-        enterEditMode();
-      }
+    console.log('🔐 Edit button clicked, checking passcode protection');
+    if (STORED_PASSCODE_HASH) {
+        console.log('🔐 Opening passcode modal for edit mode');
+        openPasscodeModal();
     } else {
-      if (error) {
-        error.textContent = "Incorrect passcode. Please try again.";
-        error.style.display = "block";
-      }
+        console.log('🔓 No passcode set, entering edit mode directly');
+        enterEditMode();
     }
-  } catch (err) {
-    if (error) {
-      error.textContent = "Error verifying passcode. Please try again.";
-      error.style.display = "block";
-    }
-  } finally {
-    if (unlockBtn) {
-      unlockBtn.innerHTML = originalText || "Unlock";
-      unlockBtn.disabled = false;
-    }
-  }
 }
 
 // Make globally available
 window.onEditClick = onEditClick;
-window.verifyPasscodeAndEnterEditMode = verifyPasscodeAndEnterEditMode;
 
 // Image Edit Modal Functions
 function openImageEditModal(index) {
@@ -3068,16 +3064,40 @@ function convertSpotifyUrl(url) {
     };
 }
 
-function openSpotifyModal() {
+function openSpotifyModal(bypassPasscode = false) {
+    console.log('🎵 openSpotifyModal called', {
+        hasPasscode: !!STORED_PASSCODE_HASH,
+        isEditMode: isEditMode,
+        bypassPasscode: bypassPasscode,
+        sessionValid: isPasscodeSessionValid(),
+        shouldBypass: !STORED_PASSCODE_HASH || isEditMode || bypassPasscode || isPasscodeSessionValid(),
+        STORED_PASSCODE_HASH: STORED_PASSCODE_HASH ? 'present' : 'null'
+    });
+    
     // Check if passcode protection is enabled
-    if (STORED_PASSCODE_HASH && !isEditMode) {
+    const sessionValid = isPasscodeSessionValid();
+    if (STORED_PASSCODE_HASH && !isEditMode && !bypassPasscode && !sessionValid) {
+        console.log('🔒 Passcode protection triggered, opening passcode modal');
         window.pendingSpotifyAction = 'open';
         openPasscodeModal();
         return;
     }
     
+    console.log('✅ Proceeding to open Spotify modal');
     const modal = document.getElementById('spotifyModal');
     const urlInput = document.getElementById('spotifyUrl');
+    
+    if (!modal) {
+        console.error('❌ Spotify modal element not found!');
+        return;
+    }
+    
+    if (!urlInput) {
+        console.error('❌ Spotify URL input element not found!');
+        return;
+    }
+    
+    console.log('🎵 Opening Spotify modal...');
     
     // Clear any previous input
     urlInput.value = '';
@@ -3197,7 +3217,7 @@ async function saveSpotifyToBackend(spotifyData) {
     try {
         console.log('🎵 Saving Spotify track to backend:', spotifyData);
         
-        const response = await fetch(`${API_BASE_URL}/memory/${MEMORY_ID}`, {
+        const response = await fetch(`${API_BASE_URL}/api/memory/${MEMORY_ID}`, {
             method: 'PUT',
             headers: {
                 'Content-Type': 'application/json'
@@ -3228,7 +3248,7 @@ async function clearSpotifyFromBackend() {
     try {
         console.log('🗑️ Clearing Spotify track from backend');
         
-        const response = await fetch(`${API_BASE_URL}/memory/${MEMORY_ID}`, {
+        const response = await fetch(`${API_BASE_URL}/api/memory/${MEMORY_ID}`, {
             method: 'PUT',
             headers: {
                 'Content-Type': 'application/json'
@@ -3285,9 +3305,21 @@ function updateSpotifyPlayerCard(data) {
     playerCard.classList.add('has-track');
 }
 
-function clearSpotifyTrack() {
+function clearSpotifyTrack(bypassPasscode = false) {
+    const sessionValid = isPasscodeSessionValid();
+    
+    console.log('🔍 clearSpotifyTrack called with:', {
+        bypassPasscode,
+        STORED_PASSCODE_HASH: !!STORED_PASSCODE_HASH,
+        isEditMode,
+        sessionValid,
+        sessionExpiry: window.passcodeSessionExpiry,
+        currentTime: Date.now(),
+        timeRemaining: window.passcodeSessionExpiry ? (window.passcodeSessionExpiry - Date.now()) / 1000 : 'no expiry'
+    });
+    
     // Check if passcode protection is enabled
-    if (STORED_PASSCODE_HASH && !isEditMode) {
+    if (STORED_PASSCODE_HASH && !isEditMode && !bypassPasscode && !sessionValid) {
         console.log('🔒 Passcode required to clear Spotify track');
         
         // Store the action to perform after passcode verification
@@ -3295,6 +3327,8 @@ function clearSpotifyTrack() {
         openPasscodeModal();
         return;
     }
+    
+    console.log('✅ Clearing Spotify track (session valid or bypassed)');
     
     // Remove from localStorage
     localStorage.removeItem('spotifyPlayer');

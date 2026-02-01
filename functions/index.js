@@ -4,9 +4,18 @@ const functions = require("firebase-functions");
 const express = require("express");
 const cors = require("cors");
 const admin = require("firebase-admin");
-const bcrypt = require("bcryptjs");
+const bcrypt = require("bcryptjs"); // Add bcrypt import
 const nodemailer = require("nodemailer");
-const { S3Client, PutObjectCommand } = require("@aws-sdk/client-s3");
+const {S3Client} = require("@aws-sdk/client-s3");
+
+// Import shared routes
+const {setupRoutes} = require("../shared/routes");
+
+// Load environment variables for local development
+require("dotenv").config();
+
+// For environment variables in Firebase Functions, use runtime environment
+// These can be set using Firebase Console or firebase functions:config:set
 
 // --------------------
 // Firebase init
@@ -21,11 +30,11 @@ const db = admin.firestore();
 // Cloudflare R2
 // --------------------
 const r2Client = new S3Client({
-  region: "auto",
-  endpoint: process.env.R2_ENDPOINT,
+  region: "auto", 
+  endpoint: process.env.R2_ENDPOINT || "https://cfb74f6c6f03ae746b61558cfd98e44d.r2.cloudflarestorage.com",
   credentials: {
-    accessKeyId: process.env.R2_ACCESS_KEY_ID,
-    secretAccessKey: process.env.R2_SECRET_ACCESS_KEY,
+    accessKeyId: process.env.R2_ACCESS_KEY_ID || "81856ac44c6c8a46b7207b5cd68b4740",
+    secretAccessKey: process.env.R2_SECRET_ACCESS_KEY || "20792b08b4598bdc215658f5962a2e06f5b73c60f925834a0d7beabe64ff7bae",
   },
 });
 
@@ -33,12 +42,10 @@ const r2Client = new S3Client({
 // Mailer
 // --------------------
 const transporter = nodemailer.createTransport({
-  host: process.env.SMTP_HOST,
-  port: 587,
-  secure: false,
+  service: "gmail",
   auth: {
-    user: process.env.SMTP_USER,
-    pass: process.env.SMTP_PASS,
+    user: process.env.EMAIL_USER || "nfcchain@gmail.com",
+    pass: process.env.EMAIL_PASSWORD || "nfyf rija wbhb mqor",
   },
 });
 
@@ -49,6 +56,10 @@ const app = express();
 
 const allowedOrigins = [
   "https://aiueoka1.github.io",
+  "https://smartlocket.com",
+  "https://www.smartlocket.com", 
+  "https://nfcchain.web.app",
+  "https://nfcchain.firebaseapp.com",
   "http://localhost:3000",
   "http://127.0.0.1:3000",
   "http://localhost:5500",
@@ -68,427 +79,15 @@ app.use(cors({
 app.use(express.json());
 
 // --------------------
-// Utils
+// Setup all routes using shared module
 // --------------------
-function formatTimestamp(timestamp) {
-  if (!timestamp) {
-    return null;
-  }
-  if (timestamp.toDate) {
-    return timestamp.toDate().toISOString();
-  }
-  if (timestamp._seconds) {
-    return new Date(timestamp._seconds * 1000).toISOString();
-  }
-  return null;
-}
-
-function generateVerificationCode() {
-  return Math.floor(100000 + Math.random() * 900000).toString();
-}
-
-// --------------------
-// Routes
-// --------------------
-app.get("/health", (req, res) => {
-  res.json({ status: "ok" });
-});
-
-app.get(
-  ["/api/admin/stats", "/admin/stats"],
-  async (req, res) => {
-    try {
-      const snapshot = await db.collection("nfcChains").get();
-
-      let total = 0;
-      let unused = 0;
-      let written = 0;
-      let activated = 0;
-      let premium = 0;
-
-      snapshot.forEach((doc) => {
-        total += 1;
-
-        const data = doc.data();
-
-        if (data.status === "unused") {
-          unused += 1;
-        }
-
-        if (data.status === "written") {
-          written += 1;
-        }
-
-        if (data.status === "activated") {
-          activated += 1;
-        }
-
-        if (data.premium === true) {
-          premium += 1;
-        }
-      });
-
-      return res.json({
-        total,
-        unused,
-        written,
-        activated,
-        premium,
-      });
-    } catch (error) {
-      console.error("Admin stats error:", error);
-      return res.status(500).json({
-        message: "Failed to load admin stats",
-      });
-    }
-  },
-);
-
-/**
- * Admin inventory list (paginated + filtered)
- */
-app.get(
-  ["/api/admin/inventory", "/admin/inventory"],
-  async (req, res) => {
-  try {
-    const page = parseInt(req.query.page, 10) || 1;
-    const limit = parseInt(req.query.limit, 10) || 50;
-    const status = req.query.status;
-    const premium = req.query.premium;
-
-    let query = db.collection("nfcChains");
-
-    // Optional filters
-    if (status && status !== "all") {
-      query = query.where("status", "==", status);
-    }
-
-    if (premium && premium !== "all") {
-      query = query.where(
-        "premium",
-        "==",
-        premium === "true" || premium === "premium"
-      );
-    }
-
-    const snapshot = await query.get();
-
-    const allDocs = [];
-    snapshot.forEach((doc) => {
-      const data = doc.data();
-
-      allDocs.push({
-        memoryId: data.memoryId || doc.id,
-        status: data.status || "unused",
-        premium: data.premium || false,
-        photoLimit: data.photoLimit || 0,
-        orderId: data.orderId || null,
-        email: data.email || null,
-        createdAt: data.createdAt ? formatTimestamp(data.createdAt) : null,
-        activatedAt: data.activatedAt ? formatTimestamp(data.activatedAt) : null,
-      });
-    });
-
-    const total = allDocs.length;
-    const start = (page - 1) * limit;
-    const end = start + limit;
-
-    const paginated = allDocs.slice(start, end);
-
-    return res.json({
-      data: paginated,
-      page,
-      limit,
-      total,
-    });
-  } catch (error) {
-    console.error("Admin inventory error:", error);
-    return res.status(500).json({
-      message: "Failed to load inventory",
-    });
-  }
-});
-
-/**
- * Admin inventory list (paginated + filtered)
- */
-app.get("/api/admin/inventory", async (req, res) => {
-  try {
-    const page = parseInt(req.query.page, 10) || 1;
-    const limit = parseInt(req.query.limit, 10) || 50;
-    const status = req.query.status;
-    const premium = req.query.premium;
-
-    let query = db.collection("nfcChains");
-
-    // Optional filters
-    if (status && status !== "all") {
-      query = query.where("status", "==", status);
-    }
-
-    if (premium && premium !== "all") {
-      query = query.where(
-        "premium",
-        "==",
-        premium === "true" || premium === "premium"
-      );
-    }
-
-    const snapshot = await query.get();
-
-    const allDocs = [];
-    snapshot.forEach((doc) => {
-      const data = doc.data();
-
-      allDocs.push({
-        memoryId: data.memoryId || doc.id,
-        status: data.status || "unused",
-        premium: data.premium || false,
-        photoLimit: data.photoLimit || 0,
-        orderId: data.orderId || null,
-        email: data.email || null,
-        createdAt: data.createdAt ? formatTimestamp(data.createdAt) : null,
-        activatedAt: data.activatedAt ? formatTimestamp(data.activatedAt) : null,
-      });
-    });
-
-    const total = allDocs.length;
-    const start = (page - 1) * limit;
-    const end = start + limit;
-
-    const paginated = allDocs.slice(start, end);
-
-    return res.json({
-      data: paginated,
-      page,
-      limit,
-      total,
-    });
-  } catch (error) {
-    console.error("Admin inventory error:", error);
-    return res.status(500).json({
-      message: "Failed to load inventory",
-    });
-  }
-});
-
-// Get memory
-app.get(["/api/memory/:memoryId", "/memory/:memoryId"], async (req, res) => {
-  const { memoryId } = req.params;
-
-  try {
-    const docRef = db.collection("nfcChains").doc(memoryId);
-    const doc = await docRef.get();
-
-    if (!doc.exists) {
-      return res.status(404).json({ message: "NFCchain not found" });
-    }
-
-    const data = doc.data();
-
-    return res.json({
-      memoryId,
-      status: data.status,
-      premium: data.premium,
-      photoLimit: data.photoLimit,
-      photoCount: data.photoCount,
-      galleryTitle: data.galleryTitle,
-      galleryData: data.galleryData,
-      images: data.images || [],
-      letterContent: data.letterContent,
-      spotifyUrl: data.spotifyUrl,
-      spotifyTrack: data.spotifyTrack || null,
-      themeSettings: data.themeSettings || null,
-      createdAt: formatTimestamp(data.createdAt),
-      activatedAt: formatTimestamp(data.activatedAt),
-    });
-  } catch (err) {
-    console.error(err);
-    return res.status(500).json({ message: "Failed to fetch memory" });
-  }
-});
-
-// Update memory (THIS FIXES YOUR 404 PUT)
-app.put(["/api/memory/:memoryId", "/memory/:memoryId"], async (req, res) => {
-  const { memoryId } = req.params;
-  const updates = req.body;
-
-  if (!updates || !Object.keys(updates).length) {
-    return res.status(400).json({ message: "No update data" });
-  }
-
-  try {
-    const ref = db.collection("nfcChains").doc(memoryId);
-    const doc = await ref.get();
-
-    if (!doc.exists) {
-      return res.status(404).json({ message: "NFCchain not found" });
-    }
-
-    await ref.update({
-      ...updates,
-      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-    });
-
-    return res.json({ success: true });
-  } catch (err) {
-    console.error(err);
-    return res.status(500).json({ success: false });
-  }
-});
-
-// Verify passcode
-app.post(["/api/verify-passcode", "/verify-passcode"], async (req, res) => {
-  const { memoryId, passcode } = req.body;
-
-  if (!memoryId || !passcode) {
-    return res.status(400).json({ valid: false });
-  }
-
-  try {
-    const ref = db.collection("nfcChains").doc(memoryId);
-    const doc = await ref.get();
-
-    if (!doc.exists) {
-      return res.status(404).json({ valid: false });
-    }
-
-    const data = doc.data();
-
-    if (!data.passcodeHash) {
-      return res.json({ valid: true });
-    }
-
-    const valid = await bcrypt.compare(passcode, data.passcodeHash);
-    return res.json({ valid });
-  } catch (err) {
-    console.error(err);
-    return res.status(500).json({ valid: false });
-  }
-});
-
-// Upload image to R2
-app.post(["/api/upload-image", "/upload-image"], async (req, res) => {
-  const { memoryId, imageData, fileName } = req.body;
-
-  if (!memoryId || !imageData) {
-    return res.status(400).json({ message: "Missing image data" });
-  }
-
-  try {
-    const base64 = imageData.replace(/^data:image\/\w+;base64,/, "");
-    const buffer = Buffer.from(base64, "base64");
-    const ext = fileName ? fileName.split(".").pop() : "jpg";
-    const key = `${memoryId}/${Date.now()}.${ext}`;
-
-    await r2Client.send(new PutObjectCommand({
-      Bucket: process.env.R2_BUCKET_NAME,
-      Key: key,
-      Body: buffer,
-      ContentType: "image/jpeg",
-      CacheControl: "public, max-age=31536000",
-    }));
-
-    const url = `${process.env.R2_PUBLIC_URL}/${key}`;
-
-    return res.json({
-      success: true,
-      url,
-    });
-  } catch (err) {
-    console.error(err);
-    return res.status(500).json({ message: "Upload failed" });
-  }
-});
-
-// Request reset
-app.post(
-  ["/api/memory/request-reset", "/memory/request-reset"],
-  async (req, res) => {
-    const { memoryId, email } = req.body;
-
-    if (!memoryId || !email) {
-      return res.status(400).json({ success: false });
-    }
-
-    try {
-      const ref = db.collection("nfcChains").doc(memoryId);
-      const doc = await ref.get();
-
-      if (!doc.exists) {
-        return res.status(404).json({ success: false });
-      }
-
-      const data = doc.data();
-      if (data.email !== email) {
-        return res.status(400).json({ success: false });
-      }
-
-      const code = generateVerificationCode();
-
-      await ref.update({
-        resetCode: code,
-        resetCodeExpiry: admin.firestore.Timestamp.fromDate(
-          new Date(Date.now() + 10 * 60 * 1000),
-        ),
-      });
-
-      await transporter.sendMail({
-        from: "SmartLocket <no-reply@memorychain>",
-        to: email,
-        subject: "Your reset code",
-        text: `Your reset code is ${code}`,
-      });
-
-      return res.json({ success: true });
-    } catch (err) {
-      console.error(err);
-      return res.status(500).json({ success: false });
-    }
-  },
-);
-
-// Reset passcode
-app.post(
-  ["/api/memory/reset-passcode", "/memory/reset-passcode"],
-  async (req, res) => {
-    const { memoryId, code, newPasscode } = req.body;
-
-    if (!memoryId || !code || !newPasscode) {
-      return res.status(400).json({ success: false });
-    }
-
-    try {
-      const ref = db.collection("nfcChains").doc(memoryId);
-      const doc = await ref.get();
-
-      if (!doc.exists()) {
-        return res.status(404).json({ success: false });
-      }
-
-      const data = doc.data();
-
-      if (data.resetCode !== code) {
-        return res.status(400).json({ success: false });
-      }
-
-      const hash = await bcrypt.hash(newPasscode, 10);
-
-      await ref.update({
-        passcodeHash: hash,
-        resetCode: admin.firestore.FieldValue.delete(),
-        resetCodeExpiry: admin.firestore.FieldValue.delete(),
-      });
-
-      return res.json({ success: true });
-    } catch (err) {
-      console.error(err);
-      return res.status(500).json({ success: false });
-    }
-  },
-);
+setupRoutes(app, db, admin, r2Client, transporter, bcrypt);
 
 // --------------------
 // Export
 // --------------------
-exports.api = functions.https.onRequest(app);
+exports.api = functions.https.onRequest({
+  timeoutSeconds: 540,
+  memory: "1GiB",
+  maxInstances: 10,
+}, app);

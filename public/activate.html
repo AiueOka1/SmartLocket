@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Activate Your SmartLocket</title>
-    <link rel="stylesheet" href="../src/style.css">
+    <link rel="stylesheet" href="activate-style.css">
 </head>
 <body>
     <div class="activation-container">
@@ -31,6 +31,7 @@
             </div>
 
             <div class="error-message" id="errorMessage"></div>
+            <div class="success-message" id="successMessage"></div>
 
             <!-- Step 1: Email Entry -->
             <div class="form-section active" id="emailSection">
@@ -110,22 +111,25 @@
     <script src="../src/config.js"></script>
     <script src="../src/script.js"></script>
     <script>
-        // API Base URL Configuration
-        const API_BASE_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
-            ? 'http://localhost:3000'
-            : 'https://us-central1-nfcchain.cloudfunctions.net/api'; // Update this when deploying
-
-        // Get Memory ID from URL
-        const urlParams = new URLSearchParams(window.location.search);
-        const memoryId = urlParams.get('id') || window.location.pathname.split('/').filter(p => p && p !== 'activate.html').pop();
+        // API_BASE_URL is already defined in config.js, no need to redeclare
+        
+        // Get Memory ID using the shared function from script.js
+        const memoryId = getMemoryIdFromURL();
         let userEmail = '';
-        let verificationToken = '';
+        let verificationToken = ''; // This will store the token from send-code
+        let verificationCode = ''; // This will store the 6-digit code from user input
 
         console.log('Memory ID extracted:', memoryId);
         console.log('Full URL:', window.location.href);
-        console.log('Query params:', Object.fromEntries(urlParams));
+        console.log('Query params:', Object.fromEntries(new URLSearchParams(window.location.search)));
         
-        document.getElementById('memoryIdDisplay').textContent = memoryId || 'INVALID';
+        // Wait for DOM to be ready before setting the display
+        document.addEventListener('DOMContentLoaded', function() {
+            const displayElement = document.getElementById('memoryIdDisplay');
+            if (displayElement) {
+                displayElement.textContent = memoryId || 'INVALID';
+            }
+        });
 
         // Email Form Handler
         document.getElementById('emailForm').addEventListener('submit', async (e) => {
@@ -143,9 +147,12 @@
                 const data = await response.json();
 
                 if (response.ok) {
+                    // Store the token returned from send-code
+                    verificationToken = data.token;
                     document.getElementById('emailDisplay').textContent = email;
                     goToStep(2);
                     startResendTimer();
+                    showSuccess('✅ Verification code sent! Check your email for the 6-digit code.');
                 } else {
                     showError(data.message || 'Failed to send verification code');
                 }
@@ -179,26 +186,9 @@
                 return;
             }
 
-            try {
-                const response = await fetch(`${API_BASE_URL}/api/activation/verify-code`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ memoryId, email: userEmail, code })
-                });
-
-                const data = await response.json();
-
-                if (response.ok) {
-                    verificationToken = data.token;
-                    goToStep(3);
-                } else {
-                    showError(data.message || 'Invalid verification code');
-                    codeInputs.forEach(input => input.value = '');
-                    codeInputs[0].focus();
-                }
-            } catch (error) {
-                showError('Network error. Please try again.');
-            }
+            // Store the verification code and go directly to passcode step
+            verificationCode = code;
+            goToStep(3);
         });
 
         // Passcode Form Handler
@@ -224,7 +214,12 @@
                         'Content-Type': 'application/json',
                         'Authorization': `Bearer ${verificationToken}`
                     },
-                    body: JSON.stringify({ memoryId, email: userEmail, passcode })
+                    body: JSON.stringify({ 
+                        memoryId, 
+                        email: userEmail, 
+                        passcode,
+                        verificationCode: verificationCode 
+                    })
                 });
 
                 const data = await response.json();
@@ -274,11 +269,13 @@
             const sections = ['emailSection', 'verificationSection', 'passcodeSection', 'successSection'];
             document.getElementById(sections[stepNumber - 1]).classList.add('active');
 
-            // Clear error
+            // Clear error and success messages
             hideError();
+            hideSuccess();
         }
 
         function showError(message) {
+            hideSuccess(); // Hide success message if showing
             const errorEl = document.getElementById('errorMessage');
             errorEl.textContent = message;
             errorEl.classList.add('show');
@@ -286,6 +283,17 @@
 
         function hideError() {
             document.getElementById('errorMessage').classList.remove('show');
+        }
+
+        function showSuccess(message) {
+            hideError(); // Hide error message if showing
+            const successEl = document.getElementById('successMessage');
+            successEl.textContent = message;
+            successEl.classList.add('show');
+        }
+
+        function hideSuccess() {
+            document.getElementById('successMessage').classList.remove('show');
         }
 
         let resendTimer = 60;
@@ -318,7 +326,7 @@
                 });
 
                 if (response.ok) {
-                    showError('New code sent! Check your email.');
+                    showSuccess('✅ New verification code sent! Check your email.');
                     startResendTimer();
                 } else {
                     showError('Failed to resend code. Please try again.');
@@ -335,7 +343,7 @@
         // Check if already activated
         async function checkActivationStatus() {
             try {
-                const response = await fetch(`${API_BASE_URL}/api/memory/${memoryId}/status`);
+                const response = await fetch(`${API_BASE_URL}/api/memory/${memoryId}`);
                 
                 if (!response.ok) {
                     // 404 means not found - that's okay, user needs to activate
@@ -348,9 +356,9 @@
                 
                 const data = await response.json();
 
-                if (data.activated) {
+                if (data.status === 'activated') {
                     // Already activated, redirect to gallery
-                    window.location.href = `/NFCchain.html?id=${memoryId}`;
+                    window.location.href = `/gallery.html?id=${memoryId}`;
                 }
             } catch (error) {
                 console.error('Error checking activation status:', error);

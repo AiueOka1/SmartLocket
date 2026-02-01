@@ -1,10 +1,10 @@
 // SmartLocket Admin Panel JavaScript
-// Connects to backend API running on localhost:3000
+// Connects to backend API
 
 // API Configuration
 const API_BASE_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
     ? 'http://localhost:3000'
-    : 'https://api-vcdrn5osga-uc.a.run.app/api';
+    : 'https://us-central1-nfcchain.cloudfunctions.net/api';
 
 // ==========================================
 // NAVIGATION
