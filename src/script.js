@@ -78,7 +78,11 @@ async function loadGalleryData() {
     }
     try {
         // FIX: Use correct API path with /api prefix
+        console.log('🔍 Making API call to:', `${API_BASE_URL}/api/memory/${MEMORY_ID}`);
+        console.log('🔍 API_BASE_URL is:', API_BASE_URL);
         const response = await fetch(`${API_BASE_URL}/api/memory/${MEMORY_ID}`);
+        console.log('🔍 Response status:', response.status);
+        console.log('🔍 Response ok:', response.ok);
         if (!response.ok) {
             if (response.status === 404) {
                 // NFCchain not found - redirect to activation
@@ -86,6 +90,7 @@ async function loadGalleryData() {
                 window.location.href = 'activate.html?id=' + MEMORY_ID;
                 return null;
             }
+            console.log('🔍 Non-404 error, throwing exception');
             throw new Error('Failed to load gallery data');
         }
         const data = await response.json();
@@ -153,6 +158,8 @@ async function loadGalleryData() {
         return data;
     } catch (error) {
         console.error('Error loading gallery:', error);
+        console.log('🔍 Error message:', error.message);
+        console.log('🔍 Error type:', error.constructor.name);
         // Only show error if it's not a redirect scenario
         if (!error.message.includes('Failed to load gallery data')) {
             alert('Failed to load gallery. Please make sure the backend is running.');
