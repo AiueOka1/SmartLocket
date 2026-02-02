@@ -932,7 +932,8 @@ function initializeSwiper() {
                             this.src = baseUrl + '/api/image/' + imagePath + '?fallback=' + Date.now();
                         } else if (this.src.includes('/api/image/') || this.src.includes('via.placeholder.com')) {
                             console.log('🔧 All external sources failed, using local placeholder...');
-                            this.src = 'data:image/svg+xml;base64,' + btoa('<svg width=\"800\" height=\"500\" xmlns=\"http://www.w3.org/2000/svg\"><rect width=\"100%\" height=\"100%\" fill=\"#6366f1\"/><text x=\"50%\" y=\"45%\" font-family=\"Arial, sans-serif\" font-size=\"24\" fill=\"white\" text-anchor=\"middle\">Image Loading...</text><text x=\"50%\" y=\"60%\" font-family=\"Arial, sans-serif\" font-size=\"16\" fill=\"#e0e7ff\" text-anchor=\"middle\">Check your connection</text></svg>');
+                            const svgData = 'PHN2ZyB3aWR0aD0iODAwIiBoZWlnaHQ9IjUwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSIjNjM2NmYxIi8+PHRleHQgeD0iNTAlIiB5PSI0NSUiIGZvbnQtZmFtaWx5PSJBcmlhbCwgc2Fucy1zZXJpZiIgZm9udC1zaXplPSIyNCIgZmlsbD0id2hpdGUiIHRleHQtYW5jaG9yPSJtaWRkbGUiPkltYWdlIExvYWRpbmcuLi48L3RleHQ+PHRleHQgeD0iNTAlIiB5PSI2MCUiIGZvbnQtZmFtaWx5PSJBcmlhbCwgc2Fucy1zZXJpZiIgZm9udC1zaXplPSIxNiIgZmlsbD0iI2UwZTdmZiIgdGV4dC1hbmNob3I9Im1pZGRsZSI+Q2hlY2sgeW91ciBjb25uZWN0aW9uPC90ZXh0Pjwvc3ZnPg==';
+                            this.src = 'data:image/svg+xml;base64,' + svgData;
                             this.style.filter = 'blur(1px)';
                             this.style.opacity = '0.7';
                         } else {
