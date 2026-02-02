@@ -100,18 +100,20 @@ function getImageUrl(src, forceCacheBust = false) {
     
     // 🔒 LOCKED - Handle direct R2 URLs (NEVER change this path!)
     if (src.includes('pub-5d6eb9dacf9146a2bd3bff425e11c1b2.r2.dev')) {
-        // For mobile data connections with DNS issues, try using the API proxy as fallback
-        if (isMobileData && !isProduction) {
-            // In development on mobile data, proxy through backend to avoid mobile carrier blocks
+        // For mobile data connections, always use API proxy to avoid carrier blocks
+        if (isMobileData) {
+            console.log('📱 Mobile data detected - using API proxy to avoid carrier blocks');
             const imagePath = src.split('pub-5d6eb9dacf9146a2bd3bff425e11c1b2.r2.dev/')[1];
             if (imagePath) {
-                const baseUrl = window.LOCKED_CONFIG?.API_LOCAL || API_BASE_URL;
+                const baseUrl = isProduction ? 
+                    (window.LOCKED_CONFIG?.API_PRODUCTION || API_BASE_URL) :
+                    (window.LOCKED_CONFIG?.API_LOCAL || API_BASE_URL);
                 return `${baseUrl}/api/image/${imagePath}?v=${Date.now()}`;
             }
         }
         
-        // Add cache-busting for mobile data connections or when forced
-        if (forceCacheBust || isMobileData) {
+        // Add cache-busting for when forced
+        if (forceCacheBust) {
             const cleanUrl = src.split('?')[0];
             return `${cleanUrl}?v=${Date.now()}`;
         }
