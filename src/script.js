@@ -1,5 +1,15 @@
 // NFCchain Swiper Gallery JavaScript
 
+// Debug mode toggle - set to false to reduce console logs by 90%
+const DEBUG_MODE = false;
+
+// Enhanced console logging with debug mode
+function debugLog(...args) {
+    if (DEBUG_MODE) {
+        console.log(...args);
+    }
+}
+
 // Get API_BASE_URL from config (set by config.js)
 const API_BASE_URL = window.API_BASE_URL || 'https://api-vcdrn5osga-uc.a.run.app';
 
@@ -9,35 +19,6 @@ const API_BASE_URL = window.API_BASE_URL || 'https://api-vcdrn5osga-uc.a.run.app
 // Public R2 bucket URL (no trailing slash)
 // This will be updated dynamically from backend if needed
 let R2_PUBLIC_URL = "https://pub-cfb74f6c6f03ae746b61558cfd98e44d.r2.dev/nfcchain";
-
-// Helper to build full image URL from filename
-function getImageUrl(filename) {
-    if (!filename) return "";
-    // If already a full URL, return as-is (backend returns full URLs)
-    if (filename.startsWith("http://") || filename.startsWith("https://")) {
-        // Fix: Ensure URL includes /nfcchain/ if it's missing
-        // Backend might return: https://pub-xxx.r2.dev/JADLNY/file.png
-        // Should be: https://pub-xxx.r2.dev/nfcchain/JADLNY/file.png
-        if (filename.includes('.r2.dev/')) {
-            const urlPattern = /^(https?:\/\/pub-[a-f0-9]+\.r2\.dev)\/(.+)$/;
-            const match = filename.match(urlPattern);
-            if (match) {
-                const domain = match[1];
-                const path = match[2];
-                // Check if /nfcchain/ is missing
-                if (!path.startsWith('nfcchain/')) {
-                    // Reconstruct URL with /nfcchain/
-                    const fixedUrl = `${domain}/nfcchain/${path}`;
-                    console.log(`🔧 Fixed R2 URL: ${filename} → ${fixedUrl}`);
-                    return fixedUrl;
-                }
-            }
-        }
-        return filename;
-    }
-    // If relative path, prepend R2 public URL
-    return `${R2_PUBLIC_URL}/${filename}`;
-}
 
 // Enhanced image loading with mobile data optimization
 function createOptimizedImage(src, alt = '', className = '') {
@@ -95,6 +76,87 @@ function createOptimizedImage(src, alt = '', className = '') {
     });
     
     return img;
+}
+
+// Enhanced getImageUrl function with cache-busting for mobile data
+function getImageUrl(src, forceCacheBust = false) {
+    if (!src) return '';
+    
+    // Detect mobile data connection
+    const connection = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
+    const isMobileData = connection && connection.type && !connection.type.includes('wifi');
+    
+    // Return as-is if already a complete URL
+    if (src.startsWith('http://') || src.startsWith('https://') || src.startsWith('data:')) {
+        // Add cache-busting for mobile data connections or when forced
+        if (forceCacheBust || isMobileData) {
+            const separator = src.includes('?') ? '&' : '?';
+            return `${src}${separator}v=${Date.now()}`;
+        }
+        return src;
+    }
+    
+    // Handle relative paths - assume they're from Cloudflare R2
+    const baseUrl = API_BASE_URL || 'http://localhost:3000';
+    const fullUrl = `${baseUrl}/api/image/${src}`;
+    
+    // Add cache-busting for mobile data connections
+    if (forceCacheBust || isMobileData) {
+        return `${fullUrl}?v=${Date.now()}`;
+    }
+    
+    return fullUrl;
+}
+
+// Force refresh all images for mobile data users having cache issues
+function forceRefreshImages() {
+    console.log('🔄 Force refreshing all images for mobile data...');
+    
+    // Detect mobile data connection
+    const connection = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
+    const isMobileData = connection && connection.type && !connection.type.includes('wifi');
+    
+    if (!isMobileData) {
+        console.log('📶 Not on mobile data, refresh not needed');
+        return;
+    }
+    
+    // Force refresh all gallery images
+    const allImages = document.querySelectorAll('.swiper-slide img, .slide-content img');
+    allImages.forEach((img, index) => {
+        if (img.src) {
+            // Add timestamp to force cache bust
+            const separator = img.src.includes('?') ? '&' : '?';
+            const newSrc = `${img.src.split('?')[0]}${separator}v=${Date.now()}&refresh=1`;
+            
+            console.log(`📱 Refreshing image ${index + 1}/${allImages.length}: ${newSrc}`);
+            img.src = newSrc;
+        }
+    });
+    
+    // Show brief notification
+    showNetworkStatus('📱 Images refreshed for mobile data', 'mobile', 3000);
+}
+
+// Show network status notification
+function showNetworkStatus(message, type = 'info', duration = 2000) {
+    // Create or get existing status element
+    let statusEl = document.getElementById('network-status');
+    if (!statusEl) {
+        statusEl = document.createElement('div');
+        statusEl.id = 'network-status';
+        statusEl.className = 'network-status';
+        document.body.appendChild(statusEl);
+    }
+    
+    // Update content and show
+    statusEl.textContent = message;
+    statusEl.className = `network-status show ${type}`;
+    
+    // Auto hide after duration
+    setTimeout(() => {
+        statusEl.classList.remove('show');
+    }, duration);
 }
 
 // ========================================
@@ -194,17 +256,10 @@ function initNetworkStatusIndicator() {
 
 // Load gallery data from backend
 async function loadGalleryData() {
-    if (galleryInitialized) {
-        console.log('🔄 Gallery already initialized, skipping load');
-        return null;
-    }
-    
     if (!MEMORY_ID) {
         console.warn('No Memory ID found in URL. Using demo mode.');
         return null;
     }
-    
-    galleryInitialized = true; // Mark as initialized
     try {
         // FIX: Use correct API path with /api prefix
         const response = await fetch(`${API_BASE_URL}/api/memory/${MEMORY_ID}`);
@@ -638,66 +693,28 @@ let currentSpotifyUrl = null; // Stores the current Spotify embed URL
 let currentSpotifyTrack = null; // Stores the current Spotify track object
 let STORED_PASSCODE_HASH = null; // Stores the passcode hash from backend
 let IS_PREMIUM = false; // Will be set from backend data
-let galleryInitialized = false; // Prevent duplicate initialization
-
-// Debug mode - set to true to enable verbose logging
-window.debugMode = false; // Set to true for debugging
-
-// Function to toggle debug mode
-window.toggleDebugMode = function() {
-    window.debugMode = !window.debugMode;
-    console.log(`🐛 Debug mode ${window.debugMode ? 'enabled' : 'disabled'}`);
-    return window.debugMode;
-};
 
 // Browser detection and compatibility fixes
 function initBrowserCompatibility() {
     const userAgent = navigator.userAgent.toLowerCase();
-    const isChrome = userAgent.includes('chrome') && !userAgent.includes('edg') && !userAgent.includes('opr');
     const isOperaGX = userAgent.includes('opr') || userAgent.includes('opera');
-    const isBrave = navigator.brave && navigator.brave.isBrave; // Brave detection
     const isFirefox = userAgent.includes('firefox');
     const isSafari = userAgent.includes('safari') && !userAgent.includes('chrome');
     const isEdge = userAgent.includes('edge') || userAgent.includes('edg');
     const isMobile = /android|iphone|ipad|ipod|blackberry|iemobile|opera mini/i.test(userAgent);
     
-    // Enhanced browser detection including Brave
-    const browserInfo = {
-        isChrome,
+    console.log('🌐 Browser detected:', {
         isOperaGX,
-        isBrave,
         isFirefox, 
         isSafari,
         isEdge,
-        isMobile,
-        userAgent: userAgent.substring(0, 50) + '...'
-    };
-    
-    // Only log in debug mode
-    if (window.debugMode) {
-        console.log('🌐 Enhanced browser detection:', browserInfo);
-    }
-    
-    // Store browser info globally for access elsewhere
-    window.browserInfo = browserInfo;
-    
-    // Check if running in iframe (can affect Opera/Brave)
-    const inIframe = window.self !== window.top;
-    if (inIframe && (browserInfo.isOperaGX || browserInfo.isBrave)) {
-        // Add iframe-specific fixes for Opera/Brave
-        document.documentElement.style.transform = 'translateZ(0)';
-        document.body.style.transform = 'translateZ(0)';
-        
-        if (window.debugMode) {
-            console.log('🖼️ Iframe detected in Opera/Brave - applied iframe fixes');
-        }
-    }
+        isMobile
+    });
     
     // Apply browser-specific fixes
     if (isOperaGX) {
         // Opera GX specific optimizations
         document.documentElement.style.setProperty('--browser-optimization', 'opera-gx');
-        document.documentElement.classList.add('opera-gx');
         
         // Fix viewport scaling issues in Opera GX
         const viewport = document.querySelector('meta[name="viewport"]');
@@ -708,64 +725,7 @@ function initBrowserCompatibility() {
         // Enhance touch responsiveness for Opera GX
         document.addEventListener('touchstart', function() {}, { passive: true });
         
-        // Fix Opera GX specific CSS transform issues
-        const operaStyle = document.createElement('style');
-        operaStyle.textContent = `
-            /* Opera GX Swiper Fixes */
-            .swiper-container {
-                will-change: transform !important;
-                transform: translateZ(0) !important;
-            }
-            .swiper-slide {
-                backface-visibility: hidden !important;
-                transform: translateZ(0) !important;
-            }
-            /* Fix dynamic island positioning in Opera */
-            .dynamic-island {
-                transform: translateZ(0) !important;
-                will-change: transform !important;
-            }
-        `;
-        document.head.appendChild(operaStyle);
-        
-        if (window.debugMode) console.log('🎮 Opera GX optimizations applied');
-    }
-    
-    if (isBrave) {
-        // Brave browser specific optimizations
-        document.documentElement.style.setProperty('--browser-optimization', 'brave');
-        document.documentElement.classList.add('brave');
-        
-        // Brave has strict privacy settings that can interfere with animations
-        const braveStyle = document.createElement('style');
-        braveStyle.textContent = `
-            /* Brave Browser Swiper Fixes */
-            .swiper-container {
-                perspective: 1000px !important;
-                transform-style: preserve-3d !important;
-            }
-            .swiper-slide {
-                transform-style: preserve-3d !important;
-                backface-visibility: hidden !important;
-            }
-            /* Fix dynamic island in Brave */
-            .dynamic-island {
-                transform-style: preserve-3d !important;
-                backface-visibility: hidden !important;
-            }
-            /* Fix potential shield interference */
-            * {
-                -webkit-transform-style: preserve-3d !important;
-                transform-style: preserve-3d !important;
-            }
-        `;
-        document.head.appendChild(braveStyle);
-        
-        // Brave specific touch handling
-        document.addEventListener('touchstart', function() {}, { passive: true });
-        document.addEventListener('touchmove', function() {}, { passive: true });
-        
-        if (window.debugMode) console.log('🛡️ Brave browser optimizations applied');
+        console.log('🎮 Opera GX optimizations applied');
     }
     
     if (isFirefox) {
@@ -798,7 +758,7 @@ function initBrowserCompatibility() {
             });
         });
         
-        if (window.debugMode) console.log('🍎 Safari optimizations applied');
+        console.log('🍎 Safari optimizations applied');
     }
     
     if (isEdge) {
@@ -829,7 +789,7 @@ function initBrowserCompatibility() {
             }
         }, { passive: true });
         
-        if (window.debugMode) console.log('📱 Mobile browser optimizations applied');
+        console.log('📱 Mobile browser optimizations applied');
     }
 }
 
@@ -841,25 +801,15 @@ document.addEventListener('DOMContentLoaded', function() {
     // Initialize network status indicator
     initNetworkStatusIndicator();
     
-    // Register service worker for enhanced mobile performance (disabled for localhost)
+    // Register service worker for enhanced mobile performance
     if ('serviceWorker' in navigator) {
-        // Determine correct service worker path based on environment
-        const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-        
-        if (!isLocalhost) {
-            // Only register service worker in production
-            const swPath = '/SmartLocket/public/sw.js';
-            
-            navigator.serviceWorker.register(swPath)
-                .then(registration => {
-                    console.log('✅ Service Worker registered successfully:', registration.scope);
-                })
-                .catch(error => {
-                    console.log('❌ Service Worker registration failed:', error);
-                });
-        } else {
-            console.log('� Service Worker disabled for local development');
-        }
+        navigator.serviceWorker.register('/sw.js')
+            .then(registration => {
+                console.log('✅ Service Worker registered successfully:', registration.scope);
+            })
+            .catch(error => {
+                console.log('❌ Service Worker registration failed:', error);
+            });
     }
     
     // Don't initialize Swiper immediately - wait for letter animation
@@ -875,39 +825,44 @@ function initializeSwiper() {
     
     // Destroy existing swiper instance to prevent conflicts
     if (mainSwiper && typeof mainSwiper.destroy === 'function') {
-        if (window.debugMode) console.log('🔄 Destroying existing Swiper instance');
+        console.log('🔄 Destroying existing Swiper instance');
         mainSwiper.destroy(true, true);
         mainSwiper = null;
     }
     
     swiperWrapper.innerHTML = ''; // Clear everything
     
-    // Debug: Show current state (reduced logging)
-    if (window.debugMode) {
-        console.log(`📊 Gallery Status:`, {
-            isPremium: IS_PREMIUM,
-            totalMemories: memories.length,
-            favorites: memories.filter(m => m.isFavorite).length,
-            maxImages: MAX_IMAGES
-        });
-    }
+    // Debug: Show current state
+    console.log(`📊 Gallery Status:`, {
+        isPremium: IS_PREMIUM,
+        totalMemories: memories.length,
+        favorites: memories.filter(m => m.isFavorite).length,
+        maxImages: MAX_IMAGES
+    });
     
     // For premium users, only show favorite images in slideshow (max 5)
     // For free users, show all images (max 5)
     let slideshowMemories = memories;
     if (IS_PREMIUM) {
         const favoriteMemories = memories.filter(m => m.isFavorite);
+        console.log(`⭐ Found ${favoriteMemories.length} favorites:`, favoriteMemories.map(m => m.title));
         
         if (favoriteMemories.length > 0) {
             slideshowMemories = favoriteMemories.slice(0, MAX_FAVORITES);
+            console.log(`⭐ Premium: Showing ${slideshowMemories.length} favorite images in slideshow`);
         } else {
             // If no favorites selected, show all memories
             slideshowMemories = memories;
+            console.log(`⭐ Premium: No favorites selected, showing all ${slideshowMemories.length} images`);
         }
+    } else {
+        console.log(`👤 Free account: Showing all ${slideshowMemories.length} images`);
     }
     
     // Store slideshow memories globally so we can reference them later
     window.currentSlideshowMemories = slideshowMemories;
+    
+    console.log('🎡 Creating Ferris Wheel with', slideshowMemories.length, 'images');
     
     // Create each memory slide
     slideshowMemories.forEach((memory, index) => {
@@ -930,11 +885,13 @@ function initializeSwiper() {
         `;
         
         swiperWrapper.appendChild(slide);
+        debugLog(`✅ Created slide ${index + 1}: ${memory.title}`);
     });
     
-    // Browser-specific Swiper configuration adjustments
-    const browserInfo = window.browserInfo || {};
-    let swiperConfig = {
+    console.log(`🎡 Total slides created: ${swiperWrapper.children.length}`);
+    
+    // Initialize Swiper
+    mainSwiper = new Swiper('.mainSwiper', {
         effect: 'coverflow',
         grabCursor: true,
         centeredSlides: true,
@@ -984,26 +941,8 @@ function initializeSwiper() {
         mousewheel: {
             enabled: true,
             sensitivity: 1,
-        }
-    };
-    
-    // Opera and Brave specific optimizations
-    if (browserInfo.isOperaGX || browserInfo.isBrave) {
-        // Reduce animations for better performance in Opera/Brave
-        swiperConfig.speed = 600; // Faster transitions
-        swiperConfig.coverflowEffect.slideShadows = false; // Disable shadows for performance
-        swiperConfig.autoplay.delay = 5000; // Slower autoplay to reduce strain
-        
-        // Disable mousewheel in Opera/Brave to prevent conflicts
-        swiperConfig.mousewheel.enabled = false;
-        
-        if (window.debugMode) {
-            console.log('🔧 Applied Opera/Brave Swiper optimizations');
-        }
-    }
-    
-    // Add breakpoints
-    swiperConfig.breakpoints = {
+        },
+        breakpoints: {
             320: {
                 slidesPerView: 1.2,
                 spaceBetween: 20,
@@ -1011,7 +950,7 @@ function initializeSwiper() {
                     rotate: 20,
                     depth: 80,
                     modifier: 1,
-                    slideShadows: browserInfo.isOperaGX || browserInfo.isBrave ? false : true,
+                    slideShadows: true,
                 },
             },
             480: {
@@ -1021,7 +960,7 @@ function initializeSwiper() {
                     rotate: 25,
                     depth: 90,
                     modifier: 1,
-                    slideShadows: browserInfo.isOperaGX || browserInfo.isBrave ? false : true,
+                    slideShadows: true,
                 },
             },
             768: {
@@ -1031,7 +970,7 @@ function initializeSwiper() {
                     rotate: 30,
                     depth: 100,
                     modifier: 1,
-                    slideShadows: browserInfo.isOperaGX || browserInfo.isBrave ? false : true,
+                    slideShadows: true,
                 },
             },
             1080: {
@@ -1041,13 +980,11 @@ function initializeSwiper() {
                     rotate: 35,
                     depth: 120,
                     modifier: 1,
-                    slideShadows: browserInfo.isOperaGX || browserInfo.isBrave ? false : true,
+                    slideShadows: true,
                 },
             }
-        };
-        
-    // Add event handlers
-    swiperConfig.on = {
+        },
+        on: {
             slideChange: function() {
                 // Get the real index (accounting for loop mode)
                 const realIndex = this.realIndex;
@@ -1056,12 +993,11 @@ function initializeSwiper() {
                 updateSlideshowCounter();
             },
             init: function() {
+                console.log('🎡 Ferris Wheel initialized with', this.slides.length, 'total slides');
                 updateSlideshowCounter();
             }
-        };
-    
-    // Initialize Swiper with optimized configuration
-    mainSwiper = new Swiper('.mainSwiper', swiperConfig);
+        }
+    });
 
     // Add hover effects to pause/resume autoplay
     const swiperContainer = document.querySelector('.mainSwiper');
@@ -1081,13 +1017,10 @@ function initializeSwiper() {
 }
 
 function updateSlideInfo(index) {
-    // Only log if debug mode is enabled
-    if (window.debugMode) {
-        const slideshowMemories = window.currentSlideshowMemories || memories;
-        const memory = slideshowMemories[index];
-        if (memory) {
-            console.log(`🎡 Viewing: ${memory.title} (${index + 1}/${slideshowMemories.length})`);
-        }
+    const slideshowMemories = window.currentSlideshowMemories || memories;
+    const memory = slideshowMemories[index];
+    if (memory) {
+        debugLog(`🎡 Viewing: ${memory.title} (${index + 1}/${slideshowMemories.length})`);
     }
 }
 
@@ -1233,25 +1166,41 @@ function regenerateSlides() {
 
 // Function to rebuild gallery from loaded memories (from backend)
 function rebuildGalleryFromMemories() {
-    console.log(`🔨 Rebuilding gallery with ${memories.length} memories`);
+    console.log('🔨 Rebuilding gallery from', memories.length, 'memories');
     
     // Update all memory image URLs to use R2 public URL if needed
     memories.forEach((memory, index) => {
+        const originalFullImage = memory.fullImage;
+        const originalThumbnail = memory.thumbnail;
+        
         // Process URLs - getImageUrl handles both full URLs and relative paths
         memory.fullImage = getImageUrl(memory.fullImage);
         memory.thumbnail = getImageUrl(memory.thumbnail || memory.fullImage);
         
-        // Test first image accessibility (reduced logging)
+        // Debug logging for first few images
+        if (index < 3) {
+            debugLog(`🖼️ Image ${index} URL processing:`, {
+                original: originalFullImage,
+                processed: memory.fullImage,
+                thumbnail: memory.thumbnail
+            });
+        }
+        
+        // Test if image URL is accessible (optional debug)
         if (index === 0) {
             const testImg = new Image();
-            testImg.onerror = () => console.error(`❌ First image URL failed to load: ${memory.fullImage} - Check CORS and public access!`);
-            testImg.src = memory.fullImage;
+            const imageUrl = getImageUrl(memory.fullImage);
+            testImg.onload = () => console.log(`✅ First image URL is accessible: ${imageUrl}`);
+            testImg.onerror = () => console.error(`❌ First image URL failed to load: ${imageUrl} - Check CORS and public access!`);
+            testImg.src = imageUrl;
         }
     });
     
     // Simply reinitialize the swiper with current memories
     // initializeSwiper will handle the favorite filtering for premium users
     initializeSwiper();
+    
+    console.log(`✅ Gallery rebuilt successfully`);
 }
 
 // Control functions for external use
@@ -1326,6 +1275,15 @@ function enhanceSwiper() {
                     pauseAutoplay();
                 } else {
                     resumeAutoplay();
+                }
+            } else if ((e.ctrlKey || e.metaKey) && e.key === 'r') {
+                // Ctrl+R or Cmd+R for force refresh on mobile data
+                const connection = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
+                const isMobileData = connection && connection.type && !connection.type.includes('wifi');
+                
+                if (isMobileData) {
+                    e.preventDefault();
+                    forceRefreshImages();
                 }
             }
         });
@@ -1781,11 +1739,9 @@ function openForgotPasscodeModal() {
         document.getElementById('forgotStep1').style.display = 'block';
         document.getElementById('forgotStep2').style.display = 'none';
         document.getElementById('forgotStep3').style.display = 'none';
-        
-        // Reset footer visibility using CSS classes
-        document.getElementById('forgotFooter1').classList.add('active');
-        document.getElementById('forgotFooter2').classList.remove('active');
-        document.getElementById('forgotFooter3').classList.remove('active');
+        document.getElementById('forgotFooter1').style.display = 'flex';
+        document.getElementById('forgotFooter2').style.display = 'none';
+        document.getElementById('forgotFooter3').style.display = 'none';
         
         // Clear inputs
         document.getElementById('resetMemoryId').value = MEMORY_ID || '';
@@ -1818,11 +1774,8 @@ function closeForgotPasscodeModal() {
 function backToStep1() {
     document.getElementById('forgotStep1').style.display = 'block';
     document.getElementById('forgotStep2').style.display = 'none';
-    
-    // Update footer visibility using CSS classes
-    document.getElementById('forgotFooter1').classList.add('active');
-    document.getElementById('forgotFooter2').classList.remove('active');
-    
+    document.getElementById('forgotFooter1').style.display = 'flex';
+    document.getElementById('forgotFooter2').style.display = 'none';
     document.getElementById('forgotStep2Error').style.display = 'none';
 }
 
@@ -1874,10 +1827,8 @@ async function sendResetCode() {
             // Move to step 2
             document.getElementById('forgotStep1').style.display = 'none';
             document.getElementById('forgotStep2').style.display = 'block';
-            
-            // Update footer visibility using CSS classes
-            document.getElementById('forgotFooter1').classList.remove('active');
-            document.getElementById('forgotFooter2').classList.add('active');
+            document.getElementById('forgotFooter1').style.display = 'none';
+            document.getElementById('forgotFooter2').style.display = 'flex';
             
             // Focus on verification code input
             setTimeout(() => document.getElementById('verificationCode').focus(), 100);
@@ -1959,10 +1910,8 @@ async function resetPasscode() {
             // Move to success step
             document.getElementById('forgotStep2').style.display = 'none';
             document.getElementById('forgotStep3').style.display = 'block';
-            
-            // Update footer visibility using CSS classes
-            document.getElementById('forgotFooter2').classList.remove('active');
-            document.getElementById('forgotFooter3').classList.add('active');
+            document.getElementById('forgotFooter2').style.display = 'none';
+            document.getElementById('forgotFooter3').style.display = 'flex';
         } else {
             errorDiv.textContent = `❌ ${result.message || 'Failed to reset passcode'}`;
             errorDiv.style.display = 'block';
@@ -2120,8 +2069,8 @@ function updateImageCounter() {
         maxCounter.textContent = maxCount;
     }
     
-    // Log for debugging only in debug mode
-    if (window.debugMode && (counter || maxCounter)) {
+    // Log for debugging
+    if (counter || maxCounter) {
         console.log(`📊 Counter updated: ${memories.length}/${IS_PREMIUM ? MAX_IMAGES_PREMIUM : MAX_IMAGES_FREE} images (Premium: ${IS_PREMIUM})`);
     }
 }
@@ -2434,28 +2383,26 @@ function handleFileUpload(files) {
                     
                     const imageUrl = result.url;
                     
-                    console.log(`✅ Image uploaded to Cloudflare R2: ${imageUrl}`);
-                    
-                    // Create new memory object with URL instead of base64
-                    const newMemory = {
-                        id: memories.length,
-                        title: `Memory #${memories.length + 1}`,
-                        description: 'Add a description for this memory...',
-                        fullImage: imageUrl,  // Store URL, not base64
-                        thumbnail: imageUrl,  // Store URL, not base64
-                        fileName: result.fileName, // Store for deletion
-                        date: new Date().toISOString().split('T')[0],
-                        location: '',
-                        tags: '',
-                        isFavorite: false
-                    };
-                    
-                    memories.push(newMemory);
-                    processedCount++;
-                    
-                    console.log(`✅ Processed ${processedCount}/${filesToProcess}: ${file.name}`);
-                    
-                    // When all files are processed
+            console.log(`✅ Image uploaded to Cloudflare R2: ${imageUrl}`);
+            
+            // Create new memory object with URL instead of base64
+            const newMemory = {
+                id: memories.length,
+                title: `Memory #${memories.length + 1}`,
+                description: 'Add a description for this memory...',
+                fullImage: imageUrl,  // Store URL, not base64
+                thumbnail: imageUrl,  // Store URL, not base64
+                fileName: result.fileName, // Store for deletion
+                date: new Date().toISOString().split('T')[0],
+                location: '',
+                tags: '',
+                isFavorite: false
+            };
+            
+            memories.push(newMemory);
+            processedCount++;
+            
+            debugLog(`✅ Processed ${processedCount}/${filesToProcess}: ${file.name}`);                    // When all files are processed
                     if (processedCount === filesToProcess) {
                         // Rebuild gallery
                         if (mainSwiper) {
@@ -3199,7 +3146,7 @@ function getRandomShapeType() {
 
 // Initialize color palette event listeners
 document.addEventListener('DOMContentLoaded', function() {
-    if (window.debugMode) console.log('DOM loaded, initializing...');
+    console.log('DOM loaded, initializing...');
     
     // Load saved theme and colors
     const savedTheme = localStorage.getItem('memorychain-theme') || 'light';
@@ -3220,11 +3167,11 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Try to attach listeners immediately, and also when palette opens
     setTimeout(() => {
-        if (window.debugMode) console.log('⏰ Delayed listener attachment...');
+        console.log('⏰ Delayed listener attachment...');
         attachColorPaletteListeners();
     }, 1000);
     
-    if (window.debugMode) console.log('✅ Initialization complete');
+    console.log('✅ Initialization complete');
     
     // Initialize Spotify player
     loadSavedSpotifyTrack();
@@ -3409,7 +3356,7 @@ function openImageEditModal(index) {
     if (dateInput) dateInput.value = memory.date || '';
     if (locationInput) locationInput.value = memory.location || '';
     if (tagsInput) tagsInput.value = memory.tags || '';
-    if (previewImage) previewImage.src = memory.fullImage || '';
+    if (previewImage) previewImage.src = getImageUrl(memory.fullImage) || '';
     
     // Show modal
     modal.style.display = 'block';

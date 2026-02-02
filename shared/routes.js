@@ -70,6 +70,22 @@ function setupRoutes(app, db, admin, r2Client, transporter, bcrypt) {
     res.json({status: "ok"});
   });
 
+  // Serve uploaded files locally
+  app.use('/uploads', (req, res, next) => {
+    const fs = require('fs');
+    const path = require('path');
+    const filename = req.url.replace('/', '');
+    const filePath = path.join(__dirname, '../backend/uploads', filename);
+    
+    if (fs.existsSync(filePath)) {
+      res.setHeader('Content-Type', 'image/jpeg');
+      res.setHeader('Cache-Control', 'public, max-age=31536000');
+      res.sendFile(path.resolve(filePath));
+    } else {
+      res.status(404).json({error: 'Image not found'});
+    }
+  });
+
   // Admin stats
   app.get(["/api/admin/stats", "/admin/stats"], async (req, res) => {
     try {
@@ -673,21 +689,40 @@ function setupRoutes(app, db, admin, r2Client, transporter, bcrypt) {
       const key = `${memoryId}/${Date.now()}.${ext}`;
 
       if (r2Client && PutObjectCommand) {
-        await r2Client.send(new PutObjectCommand({
-          Bucket: process.env.R2_BUCKET_NAME || "nfcchain",
-          Key: key,
-          Body: buffer,
-          ContentType: "image/jpeg",
-          CacheControl: "public, max-age=31536000",
-        }));
+        try {
+          await r2Client.send(new PutObjectCommand({
+            Bucket: process.env.R2_BUCKET_NAME || "nfcchain",
+            Key: key,
+            Body: buffer,
+            ContentType: "image/jpeg",
+            CacheControl: "public, max-age=31536000",
+          }));
 
-        const publicUrl = process.env.R2_PUBLIC_URL || "https://pub-5d6eb9dacf9146a2bd3bff425e11c1b2.r2.dev";
-        const url = `${publicUrl}/${key}`;
-        return res.json({ success: true, url });
-      } else {
-        // Fallback for environments without R2
-        return res.json({ success: true, url: "placeholder-url" });
+          const publicUrl = process.env.R2_PUBLIC_URL || "https://pub-5d6eb9dacf9146a2bd3bff425e11c1b2.r2.dev";
+          const url = `${publicUrl}/${key}`;
+          return res.json({ success: true, url });
+        } catch (r2Error) {
+          console.log("R2 upload failed, using local storage");
+        }
       }
+      
+      // Local storage fallback
+      const fs = require('fs');
+      const path = require('path');
+      
+      const uploadsDir = path.join(__dirname, '../backend/uploads');
+      if (!fs.existsSync(uploadsDir)) {
+        fs.mkdirSync(uploadsDir, { recursive: true });
+      }
+      
+      const localFileName = `${memoryId}_${Date.now()}.${ext}`;
+      const localFilePath = path.join(uploadsDir, localFileName);
+      
+      fs.writeFileSync(localFilePath, buffer);
+      
+      const localUrl = `http://localhost:3000/uploads/${localFileName}`;
+      return res.json({ success: true, url: localUrl });
+      
     } catch (err) {
       console.error(err);
       return res.status(500).json({message: "Upload failed"});
