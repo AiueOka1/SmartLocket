@@ -81,39 +81,14 @@ function getImageUrl(src, forceCacheBust = false) {
                         window.LOCKED_CONFIG.isProduction() : 
                         !window.location.href.includes('localhost');
     
-    // 🔒 LOCKED - Handle direct R2 URLs (NEVER change this path!)
+    // 🔒 MOBILE CARRIER FIX - Always use API proxy for R2 images to bypass blocking
     if (src.includes('pub-5d6eb9dacf9146a2bd3bff425e11c1b2.r2.dev')) {
-        // Add cache-busting when forced
-        if (forceCacheBust) {
-            const cleanUrl = src.split('?')[0];
-            return `${cleanUrl}?v=${Date.now()}`;
-        }
-        return src;
-    }
-    
-    // 🔒 LOCKED - Handle localhost API URLs - convert to R2 in production
-    if (src.includes('/api/image/')) {
-        if (isProduction) {
-            // Convert localhost API URL to direct R2 URL using LOCKED path
-            let imagePath = src.split('/api/image/')[1];
-            
-            // Handle different path formats - remove bucket prefix if present
-            if (imagePath.startsWith('nfcchain/')) {
-                imagePath = imagePath.substring('nfcchain/'.length);
-            }
-            
-            // 🔒 LOCKED - Use LOCKED R2_PUBLIC_URL
-            const fullUrl = `${R2_PUBLIC_URL}/${imagePath}`;
-            
-            // Add cache-busting for mobile data connections
-            if (forceCacheBust) {
-                return `${fullUrl}?v=${Date.now()}`;
-            }
-            return fullUrl;
-        } else {
-            // 🔒 LOCKED - In development, use LOCKED localhost URL
-            const baseUrl = window.LOCKED_CONFIG?.API_LOCAL || API_BASE_URL;
-            const imagePath = src.split('/api/image/')[1];
+        // Extract the path after the domain
+        const urlParts = src.split('pub-5d6eb9dacf9146a2bd3bff425e11c1b2.r2.dev/');
+        if (urlParts.length > 1) {
+            let imagePath = urlParts[1].split('?')[0]; // Remove any existing query params
+            // Always proxy through API to avoid carrier blocking
+            const baseUrl = API_BASE_URL;
             const proxiedUrl = `${baseUrl}/api/image/${imagePath}`;
             
             if (forceCacheBust) {
@@ -121,6 +96,19 @@ function getImageUrl(src, forceCacheBust = false) {
             }
             return proxiedUrl;
         }
+        return src;
+    }
+    
+    // 🔒 LOCKED - Handle localhost API URLs - keep as API proxy
+    if (src.includes('/api/image/')) {
+        const baseUrl = API_BASE_URL;
+        const imagePath = src.split('/api/image/')[1];
+        const proxiedUrl = `${baseUrl}/api/image/${imagePath}`;
+        
+        if (forceCacheBust) {
+            return `${proxiedUrl}?v=${Date.now()}`;
+        }
+        return proxiedUrl;
     }
     
     // Return as-is if already a complete URL (not R2 or API)
@@ -134,27 +122,14 @@ function getImageUrl(src, forceCacheBust = false) {
         return src;
     }
     
-    // 🔒 LOCKED - Handle relative paths - build full R2 URL
-    if (isProduction) {
-        // In production, use LOCKED R2 URL directly
-        const fullUrl = `${R2_PUBLIC_URL}/${src}`;
-        
-        // Add cache-busting when forced
-        if (forceCacheBust) {
-            return `${fullUrl}?v=${Date.now()}`;
-        }
-        return fullUrl;
-    } else {
-        // In development, proxy through LOCKED backend URL
-        const baseUrl = window.LOCKED_CONFIG?.API_LOCAL || API_BASE_URL;
-        const fullUrl = `${baseUrl}/api/image/${src}`;
-        
-        // Add cache-busting when forced
-        if (forceCacheBust) {
-            return `${fullUrl}?v=${Date.now()}`;
-        }
-        return fullUrl;
+    // 🔒 LOCKED - Handle relative paths - always use API proxy
+    const baseUrl = API_BASE_URL;
+    const fullUrl = `${baseUrl}/api/image/${src}`;
+    
+    if (forceCacheBust) {
+        return `${fullUrl}?v=${Date.now()}`;
     }
+    return fullUrl;
 }
 
 // Force refresh all images for mobile data users having cache issues
@@ -926,25 +901,18 @@ function initializeSwiper() {
                      alt="${memory.title}"
                      loading="lazy"
                      onerror="
-                        if (this.src.includes('pub-5d6eb9dacf9146a2bd3bff425e11c1b2.r2.dev')) {
-                            console.log('📱 R2 blocked, trying API proxy...');
-                            const imagePath = this.src.split('pub-5d6eb9dacf9146a2bd3bff425e11c1b2.r2.dev/')[1].split('?')[0];
-                            const baseUrl = '${API_BASE_URL}';
-                            this.src = baseUrl + '/api/image/' + imagePath + '?fallback=' + Date.now();
-                        } else {
-                            console.log('🔧 All sources failed, hiding image...');
-                            this.style.display = 'none';
-                            const parent = this.parentElement;
-                            if (parent) {
-                                parent.style.background = 'linear-gradient(45deg, #6366f1, #8b5cf6)';
-                                parent.style.display = 'flex';
-                                parent.style.alignItems = 'center';
-                                parent.style.justifyContent = 'center';
-                                parent.style.color = 'white';
-                                parent.style.fontSize = '18px';
-                                parent.style.fontWeight = 'bold';
-                                parent.innerHTML = '<div style=\"text-align: center; padding: 20px;\"><div>📱</div><div>Image Loading...</div><div style=\"font-size: 14px; opacity: 0.8;\">Check your connection</div></div>';
-                            }
+                        console.log('� Image failed to load, showing placeholder...');
+                        this.style.display = 'none';
+                        const parent = this.parentElement;
+                        if (parent) {
+                            parent.style.background = 'linear-gradient(45deg, #6366f1, #8b5cf6)';
+                            parent.style.display = 'flex';
+                            parent.style.alignItems = 'center';
+                            parent.style.justifyContent = 'center';
+                            parent.style.color = 'white';
+                            parent.style.fontSize = '18px';
+                            parent.style.fontWeight = 'bold';
+                            parent.innerHTML = '&lt;div style=&quot;text-align: center; padding: 20px;&quot;&gt;&lt;div&gt;📱&lt;/div&gt;&lt;div&gt;Image Loading...&lt;/div&gt;&lt;div style=&quot;font-size: 14px; opacity: 0.8;&quot;&gt;Check your connection&lt;/div&gt;&lt;/div&gt;';
                         }
                      ">
                 <div class="slide-info">
