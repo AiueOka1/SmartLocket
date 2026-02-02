@@ -24,58 +24,34 @@ const API_BASE_URL = window.API_BASE_URL || window.LOCKED_CONFIG?.API_PRODUCTION
 // LOCKED Public R2 bucket URL - NEVER change this without updating ALL references
 let R2_PUBLIC_URL = window.R2_PUBLIC_URL || window.LOCKED_CONFIG?.R2_PUBLIC_URL || "https://pub-5d6eb9dacf9146a2bd3bff425e11c1b2.r2.dev";
 
-// Enhanced image loading with mobile data optimization
+// Enhanced image loading with automatic fallback
 function createOptimizedImage(src, alt = '', className = '') {
     const img = document.createElement('img');
-    
-    // Detect connection quality
-    const connection = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
-    const isSlowConnection = connection && (connection.effectiveType === 'slow-2g' || connection.effectiveType === '2g');
-    const isMobileData = connection && connection.type && !connection.type.includes('wifi');
     
     // Set basic attributes
     img.alt = alt;
     if (className) img.className = className;
-    
-    // Enable native lazy loading
     img.loading = 'lazy';
     
-    // Add optimized loading for mobile data
-    if (isSlowConnection || isMobileData) {
-        img.style.filter = 'blur(5px)';
-        img.style.transition = 'filter 0.3s ease';
-        
-        const lowQualityPlaceholder = src.includes('r2.dev') 
-            ? src.replace(/(\.[^.]+)$/, '_thumb$1') // Try thumbnail version first
-            : src;
-            
-        // Load low quality first, then replace with full quality
-        img.src = lowQualityPlaceholder;
-        
-        img.addEventListener('load', function() {
-            // Remove blur effect once loaded
-            img.style.filter = 'none';
-            
-            // If this was a placeholder, load the full quality version
-            if (lowQualityPlaceholder !== src && this.src === lowQualityPlaceholder) {
-                const fullImg = new Image();
-                fullImg.onload = function() {
-                    img.src = src;
-                    console.log(`� Upgraded image quality for mobile data: ${src}`);
-                };
-                fullImg.src = src;
-            }
-        }, { once: true });
-        
-        console.log(`📱 Using mobile-optimized loading for: ${src}`);
-    } else {
-        // Standard loading for fast connections
-        img.src = src;
-    }
+    // Set initial source
+    img.src = src;
     
-    // Add error handling
+    // Add automatic fallback for blocked domains
     img.addEventListener('error', function() {
-        console.error(`Failed to load image: ${src}`);
+        // If R2 direct URL fails, try API proxy
+        if (this.src.includes('pub-5d6eb9dacf9146a2bd3bff425e11c1b2.r2.dev')) {
+            console.log('📱 R2 blocked, trying API proxy fallback...');
+            const imagePath = this.src.split('pub-5d6eb9dacf9146a2bd3bff425e11c1b2.r2.dev/')[1];
+            if (imagePath) {
+                const isProduction = !window.location.href.includes('localhost');
+                const baseUrl = isProduction ? 
+                    (window.LOCKED_CONFIG?.API_PRODUCTION || API_BASE_URL) :
+                    (window.LOCKED_CONFIG?.API_LOCAL || API_BASE_URL);
+                this.src = `${baseUrl}/api/image/${imagePath}?fallback=${Date.now()}`;
+                return;
+            }
+        }
+        console.error(`Failed to load image: ${this.src}`);
         this.style.display = 'none';
     });
     
@@ -86,13 +62,6 @@ function createOptimizedImage(src, alt = '', className = '') {
 function getImageUrl(src, forceCacheBust = false) {
     if (!src) return '';
     
-    // Detect mobile data connection - be more conservative
-    const connection = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
-    const isMobileData = connection && (
-        connection.type === 'cellular' || 
-        (connection.type && !connection.type.includes('wifi') && !connection.type.includes('ethernet'))
-    );
-    
     // 🔒 LOCKED - Check if we're in production using LOCKED config
     const isProduction = window.LOCKED_CONFIG?.isProduction ? 
                         window.LOCKED_CONFIG.isProduction() : 
@@ -100,19 +69,7 @@ function getImageUrl(src, forceCacheBust = false) {
     
     // 🔒 LOCKED - Handle direct R2 URLs (NEVER change this path!)
     if (src.includes('pub-5d6eb9dacf9146a2bd3bff425e11c1b2.r2.dev')) {
-        // For mobile data connections, always use API proxy to avoid carrier blocks
-        if (isMobileData) {
-            console.log('📱 Mobile data detected - using API proxy to avoid carrier blocks');
-            const imagePath = src.split('pub-5d6eb9dacf9146a2bd3bff425e11c1b2.r2.dev/')[1];
-            if (imagePath) {
-                const baseUrl = isProduction ? 
-                    (window.LOCKED_CONFIG?.API_PRODUCTION || API_BASE_URL) :
-                    (window.LOCKED_CONFIG?.API_LOCAL || API_BASE_URL);
-                return `${baseUrl}/api/image/${imagePath}?v=${Date.now()}`;
-            }
-        }
-        
-        // Add cache-busting for when forced
+        // Add cache-busting when forced
         if (forceCacheBust) {
             const cleanUrl = src.split('?')[0];
             return `${cleanUrl}?v=${Date.now()}`;
@@ -135,7 +92,7 @@ function getImageUrl(src, forceCacheBust = false) {
             const fullUrl = `${R2_PUBLIC_URL}/${imagePath}`;
             
             // Add cache-busting for mobile data connections
-            if (forceCacheBust || isMobileData) {
+            if (forceCacheBust) {
                 return `${fullUrl}?v=${Date.now()}`;
             }
             return fullUrl;
@@ -145,7 +102,7 @@ function getImageUrl(src, forceCacheBust = false) {
             const imagePath = src.split('/api/image/')[1];
             const proxiedUrl = `${baseUrl}/api/image/${imagePath}`;
             
-            if (forceCacheBust || isMobileData) {
+            if (forceCacheBust) {
                 return `${proxiedUrl}?v=${Date.now()}`;
             }
             return proxiedUrl;
@@ -154,8 +111,8 @@ function getImageUrl(src, forceCacheBust = false) {
     
     // Return as-is if already a complete URL (not R2 or API)
     if (src.startsWith('http://') || src.startsWith('https://') || src.startsWith('data:')) {
-        // Add cache-busting for mobile data connections or when forced
-        if (forceCacheBust || isMobileData) {
+        // Add cache-busting when forced
+        if (forceCacheBust) {
             // Clean any existing version parameters first to avoid duplicates
             const cleanUrl = src.split('?')[0];
             return `${cleanUrl}?v=${Date.now()}`;
@@ -168,8 +125,8 @@ function getImageUrl(src, forceCacheBust = false) {
         // In production, use LOCKED R2 URL directly
         const fullUrl = `${R2_PUBLIC_URL}/${src}`;
         
-        // Add cache-busting for mobile data connections
-        if (forceCacheBust || isMobileData) {
+        // Add cache-busting when forced
+        if (forceCacheBust) {
             return `${fullUrl}?v=${Date.now()}`;
         }
         return fullUrl;
@@ -178,8 +135,8 @@ function getImageUrl(src, forceCacheBust = false) {
         const baseUrl = window.LOCKED_CONFIG?.API_LOCAL || API_BASE_URL;
         const fullUrl = `${baseUrl}/api/image/${src}`;
         
-        // Add cache-busting for mobile data connections
-        if (forceCacheBust || isMobileData) {
+        // Add cache-busting when forced
+        if (forceCacheBust) {
             return `${fullUrl}?v=${Date.now()}`;
         }
         return fullUrl;
