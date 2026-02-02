@@ -25,10 +25,8 @@ Frontend Local:   http://localhost:3000
 If you change ANY URL above, you MUST update ALL of these files:
 
 #### Frontend Files:
-- ✅ `src/config.js` - LOCKED configuration
-- ✅ `src/script.js` - Uses LOCKED config
-- ✅ `public/src/config.js` - Deployed version
-- ✅ `public/src/script.js` - Deployed version
+- ✅ `src/config.js` - LOCKED configuration (SINGLE SOURCE)
+- ✅ `src/script.js` - Uses LOCKED config (SINGLE SOURCE)
 
 #### Backend Files:
 - ✅ `backend/.env` - LOCKED environment
@@ -42,6 +40,11 @@ If you change ANY URL above, you MUST update ALL of these files:
 #### Environment Files:
 - ✅ `.env.example` - Template with LOCKED URLs
 - ✅ `functions/.env` - Firebase Functions environment
+
+#### HTML Files (reference ../src/ files):
+- ✅ `public/gallery.html` - References ../src/config.js and ../src/script.js
+- ✅ `public/index.html` - References ../src/config.js and ../src/script.js
+- ✅ `public/activate.html` - References ../src/config.js
 
 ### 🚨 WARNING: BEFORE CHANGING ANY URL
 

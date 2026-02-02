@@ -80,10 +80,11 @@ if (typeof window.LOCKED_CONFIG === 'undefined') {
 // ⚠️  CRITICAL WARNING - READ BEFORE MAKING ANY CHANGES
 // ===================================================================
 // These URLs are used across multiple files and environments:
-// 1. Frontend: src/script.js, public/src/script.js
+// 1. Frontend: src/config.js, src/script.js (SINGLE SOURCE)
 // 2. Backend: backend/.env, backend/server.js, backend/server-new.js
 // 3. Functions: functions/.env, functions/index.js
 // 4. Shared: shared/routes.js, functions/shared/routes.js
+// 5. HTML: public/*.html files reference ../src/ files
 // 
 // IF YOU CHANGE ANY URL HERE, YOU MUST UPDATE ALL REFERENCES!
 // ===================================================================
