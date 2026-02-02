@@ -10,15 +10,19 @@ function debugLog(...args) {
     }
 }
 
-// Get API_BASE_URL from config (set by config.js)
-const API_BASE_URL = window.API_BASE_URL || 'https://api-vcdrn5osga-uc.a.run.app';
+// ===================================================================
+// 🔒 LOCKED CONFIGURATION - DO NOT TOUCH THESE PATHS!
+// ===================================================================
+// Get LOCKED URLs from config.js - DO NOT HARDCODE URLs HERE!
+
+// Get API_BASE_URL from LOCKED config
+const API_BASE_URL = window.API_BASE_URL || window.LOCKED_CONFIG?.API_PRODUCTION || 'https://api-vcdrn5osga-uc.a.run.app';
 
 // =============================
-// Cloudflare R2 Image Settings
+// 🔒 LOCKED Cloudflare R2 Image Settings - DO NOT MODIFY!
 // =============================
-// Public R2 bucket URL (no trailing slash)
-// This will be updated dynamically from backend if needed
-let R2_PUBLIC_URL = "https://pub-5d6eb9dacf9146a2bd3bff425e11c1b2.r2.dev";
+// LOCKED Public R2 bucket URL - NEVER change this without updating ALL references
+let R2_PUBLIC_URL = window.R2_PUBLIC_URL || window.LOCKED_CONFIG?.R2_PUBLIC_URL || "https://pub-5d6eb9dacf9146a2bd3bff425e11c1b2.r2.dev";
 
 // Enhanced image loading with mobile data optimization
 function createOptimizedImage(src, alt = '', className = '') {
@@ -78,7 +82,7 @@ function createOptimizedImage(src, alt = '', className = '') {
     return img;
 }
 
-// Enhanced getImageUrl function with cache-busting for mobile data
+// 🔒 LOCKED getImageUrl function - DO NOT MODIFY PATHS!
 function getImageUrl(src, forceCacheBust = false) {
     if (!src) return '';
     
@@ -86,10 +90,12 @@ function getImageUrl(src, forceCacheBust = false) {
     const connection = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
     const isMobileData = connection && connection.type && !connection.type.includes('wifi');
     
-    // Check if we're in production (not localhost)
-    const isProduction = !window.location.href.includes('localhost');
+    // 🔒 LOCKED - Check if we're in production using LOCKED config
+    const isProduction = window.LOCKED_CONFIG?.isProduction ? 
+                        window.LOCKED_CONFIG.isProduction() : 
+                        !window.location.href.includes('localhost');
     
-    // Handle direct R2 URLs
+    // 🔒 LOCKED - Handle direct R2 URLs (NEVER change this path!)
     if (src.includes('pub-5d6eb9dacf9146a2bd3bff425e11c1b2.r2.dev')) {
         // Add cache-busting for mobile data connections or when forced
         if (forceCacheBust || isMobileData) {
@@ -99,17 +105,18 @@ function getImageUrl(src, forceCacheBust = false) {
         return src;
     }
     
-    // Handle localhost API URLs - convert to R2 in production
+    // 🔒 LOCKED - Handle localhost API URLs - convert to R2 in production
     if (src.includes('/api/image/')) {
         if (isProduction) {
-            // Convert localhost API URL to direct R2 URL
+            // Convert localhost API URL to direct R2 URL using LOCKED path
             let imagePath = src.split('/api/image/')[1];
             
-            // Handle different path formats
+            // Handle different path formats - remove bucket prefix if present
             if (imagePath.startsWith('nfcchain/')) {
-                imagePath = imagePath.substring('nfcchain/'.length); // Remove 'nfcchain/' prefix
+                imagePath = imagePath.substring('nfcchain/'.length);
             }
             
+            // 🔒 LOCKED - Use LOCKED R2_PUBLIC_URL
             const fullUrl = `${R2_PUBLIC_URL}/${imagePath}`;
             
             // Add cache-busting for mobile data connections
@@ -118,8 +125,8 @@ function getImageUrl(src, forceCacheBust = false) {
             }
             return fullUrl;
         } else {
-            // In development, keep as-is but ensure we're pointing to correct localhost
-            const baseUrl = API_BASE_URL || 'http://localhost:3000';
+            // 🔒 LOCKED - In development, use LOCKED localhost URL
+            const baseUrl = window.LOCKED_CONFIG?.API_LOCAL || API_BASE_URL;
             const imagePath = src.split('/api/image/')[1];
             const proxiedUrl = `${baseUrl}/api/image/${imagePath}`;
             
@@ -146,9 +153,9 @@ function getImageUrl(src, forceCacheBust = false) {
         return src;
     }
     
-    // Handle relative paths - build full R2 URL
+    // 🔒 LOCKED - Handle relative paths - build full R2 URL
     if (isProduction) {
-        // In production, use R2 URL directly
+        // In production, use LOCKED R2 URL directly
         const fullUrl = `${R2_PUBLIC_URL}/${src}`;
         
         // Add cache-busting for mobile data connections
@@ -157,8 +164,8 @@ function getImageUrl(src, forceCacheBust = false) {
         }
         return fullUrl;
     } else {
-        // In development, proxy through backend
-        const baseUrl = API_BASE_URL || 'http://localhost:3000';
+        // In development, proxy through LOCKED backend URL
+        const baseUrl = window.LOCKED_CONFIG?.API_LOCAL || API_BASE_URL;
         const fullUrl = `${baseUrl}/api/image/${src}`;
         
         // Add cache-busting for mobile data connections

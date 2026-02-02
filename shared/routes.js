@@ -76,7 +76,7 @@ function setupRoutes(app, db, admin, r2Client, transporter, bcrypt) {
       // Get the image path from the URL
       const imagePath = req.params[0]; // Get everything after /api/image/
       
-      // Construct R2 URL
+      // 🔒 LOCKED - Construct R2 URL using LOCKED configuration
       const r2BaseUrl = process.env.R2_PUBLIC_URL || 'https://pub-5d6eb9dacf9146a2bd3bff425e11c1b2.r2.dev';
       const imageUrl = `${r2BaseUrl}/${imagePath}`;
       
@@ -749,6 +749,7 @@ function setupRoutes(app, db, admin, r2Client, transporter, bcrypt) {
             CacheControl: "public, max-age=31536000",
           }));
 
+          // 🔒 LOCKED - Use LOCKED R2 public URL
           const publicUrl = process.env.R2_PUBLIC_URL || "https://pub-5d6eb9dacf9146a2bd3bff425e11c1b2.r2.dev";
           const url = `${publicUrl}/${key}`;
           return res.json({ success: true, url });
