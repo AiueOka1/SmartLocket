@@ -18,6 +18,13 @@ function debugLog(...args) {
 // Get API_BASE_URL from LOCKED config
 const API_BASE_URL = window.API_BASE_URL || window.LOCKED_CONFIG?.API_PRODUCTION || 'https://api-vcdrn5osga-uc.a.run.app';
 
+// 🔥 MOBILE CARRIER BYPASS - Cloudflare Worker Assets Relay
+// GitHub Pages + Firebase + R2 Setup - Your deployed worker:
+const ASSETS_RELAY_URL = 'https://smartlocket-asset.somarious2.workers.dev';
+// Alternative options for future:
+// const ASSETS_RELAY_URL = 'https://cdn.yourdomain.com'; // Custom domain
+// const ASSETS_RELAY_URL = 'https://your-project.web.app/assets'; // Firebase domain
+
 // =============================
 // 🔒 LOCKED Cloudflare R2 Image Settings - DO NOT MODIFY!
 // =============================
@@ -76,39 +83,32 @@ function createOptimizedImage(src, alt = '', className = '') {
 function getImageUrl(src, forceCacheBust = false) {
     if (!src) return '';
     
-    // 🔒 LOCKED - Check if we're in production using LOCKED config
-    const isProduction = window.LOCKED_CONFIG?.isProduction ? 
-                        window.LOCKED_CONFIG.isProduction() : 
-                        !window.location.href.includes('localhost');
-    
-    // 🔒 MOBILE CARRIER FIX - Always use API proxy for R2 images to bypass blocking
+    // � MOBILE CARRIER FIX - Always use Cloudflare Worker relay for ALL images
     if (src.includes('pub-5d6eb9dacf9146a2bd3bff425e11c1b2.r2.dev')) {
         // Extract the path after the domain
         const urlParts = src.split('pub-5d6eb9dacf9146a2bd3bff425e11c1b2.r2.dev/');
         if (urlParts.length > 1) {
             let imagePath = urlParts[1].split('?')[0]; // Remove any existing query params
-            // Always proxy through API to avoid carrier blocking
-            const baseUrl = API_BASE_URL;
-            const proxiedUrl = `${baseUrl}/api/image/${imagePath}`;
+            // Use Cloudflare Worker relay - carrier sees YOUR domain, not R2
+            const relayUrl = `${ASSETS_RELAY_URL}/${imagePath}`;
             
             if (forceCacheBust) {
-                return `${proxiedUrl}?v=${Date.now()}`;
+                return `${relayUrl}?v=${Date.now()}`;
             }
-            return proxiedUrl;
+            return relayUrl;
         }
         return src;
     }
     
-    // 🔒 LOCKED - Handle localhost API URLs - keep as API proxy
+    // � Handle localhost API URLs - also route through relay in production
     if (src.includes('/api/image/')) {
-        const baseUrl = API_BASE_URL;
         const imagePath = src.split('/api/image/')[1];
-        const proxiedUrl = `${baseUrl}/api/image/${imagePath}`;
+        const relayUrl = `${ASSETS_RELAY_URL}/${imagePath}`;
         
         if (forceCacheBust) {
-            return `${proxiedUrl}?v=${Date.now()}`;
+            return `${relayUrl}?v=${Date.now()}`;
         }
-        return proxiedUrl;
+        return relayUrl;
     }
     
     // Return as-is if already a complete URL (not R2 or API)
@@ -122,14 +122,13 @@ function getImageUrl(src, forceCacheBust = false) {
         return src;
     }
     
-    // 🔒 LOCKED - Handle relative paths - always use API proxy
-    const baseUrl = API_BASE_URL;
-    const fullUrl = `${baseUrl}/api/image/${src}`;
+    // � Handle relative paths - always use Cloudflare Worker relay
+    const relayUrl = `${ASSETS_RELAY_URL}/${src}`;
     
     if (forceCacheBust) {
-        return `${fullUrl}?v=${Date.now()}`;
+        return `${relayUrl}?v=${Date.now()}`;
     }
-    return fullUrl;
+    return relayUrl;
 }
 
 // Force refresh all images for mobile data users having cache issues
