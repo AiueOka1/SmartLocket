@@ -915,10 +915,7 @@ function initializeSwiper() {
                         if (this.src.includes('pub-5d6eb9dacf9146a2bd3bff425e11c1b2.r2.dev')) {
                             console.log('📱 R2 blocked, trying API proxy...');
                             const imagePath = this.src.split('pub-5d6eb9dacf9146a2bd3bff425e11c1b2.r2.dev/')[1].split('?')[0];
-                            const isProduction = !window.location.href.includes('localhost');
-                            const baseUrl = isProduction ? 
-                                (window.LOCKED_CONFIG?.API_PRODUCTION || '${API_BASE_URL}') :
-                                (window.LOCKED_CONFIG?.API_LOCAL || '${API_BASE_URL}');
+                            const baseUrl = '${API_BASE_URL}';
                             this.src = baseUrl + '/api/image/' + imagePath + '?fallback=' + Date.now();
                         } else {
                             console.error('❌ Failed to load image:', this.src); 
