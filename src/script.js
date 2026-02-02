@@ -1739,9 +1739,9 @@ function openForgotPasscodeModal() {
         document.getElementById('forgotStep1').style.display = 'block';
         document.getElementById('forgotStep2').style.display = 'none';
         document.getElementById('forgotStep3').style.display = 'none';
-        document.getElementById('forgotFooter1').style.display = 'flex';
-        document.getElementById('forgotFooter2').style.display = 'none';
-        document.getElementById('forgotFooter3').style.display = 'none';
+        document.getElementById('forgotFooter1').classList.add('active');
+        document.getElementById('forgotFooter2').classList.remove('active');
+        document.getElementById('forgotFooter3').classList.remove('active');
         
         // Clear inputs
         document.getElementById('resetMemoryId').value = MEMORY_ID || '';
@@ -1774,8 +1774,8 @@ function closeForgotPasscodeModal() {
 function backToStep1() {
     document.getElementById('forgotStep1').style.display = 'block';
     document.getElementById('forgotStep2').style.display = 'none';
-    document.getElementById('forgotFooter1').style.display = 'flex';
-    document.getElementById('forgotFooter2').style.display = 'none';
+    document.getElementById('forgotFooter1').classList.add('active');
+    document.getElementById('forgotFooter2').classList.remove('active');
     document.getElementById('forgotStep2Error').style.display = 'none';
 }
 
@@ -1827,8 +1827,8 @@ async function sendResetCode() {
             // Move to step 2
             document.getElementById('forgotStep1').style.display = 'none';
             document.getElementById('forgotStep2').style.display = 'block';
-            document.getElementById('forgotFooter1').style.display = 'none';
-            document.getElementById('forgotFooter2').style.display = 'flex';
+            document.getElementById('forgotFooter1').classList.remove('active');
+            document.getElementById('forgotFooter2').classList.add('active');
             
             // Focus on verification code input
             setTimeout(() => document.getElementById('verificationCode').focus(), 100);
@@ -1910,8 +1910,8 @@ async function resetPasscode() {
             // Move to success step
             document.getElementById('forgotStep2').style.display = 'none';
             document.getElementById('forgotStep3').style.display = 'block';
-            document.getElementById('forgotFooter2').style.display = 'none';
-            document.getElementById('forgotFooter3').style.display = 'flex';
+            document.getElementById('forgotFooter2').classList.remove('active');
+            document.getElementById('forgotFooter3').classList.add('active');
         } else {
             errorDiv.textContent = `❌ ${result.message || 'Failed to reset passcode'}`;
             errorDiv.style.display = 'block';
