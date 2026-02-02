@@ -86,12 +86,36 @@ function getImageUrl(src, forceCacheBust = false) {
     const connection = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
     const isMobileData = connection && connection.type && !connection.type.includes('wifi');
     
-    // Return as-is if already a complete URL
+    // Handle direct R2 URLs - proxy them through our backend for CORS
+    if (src.includes('pub-5d6eb9dacf9146a2bd3bff425e11c1b2.r2.dev')) {
+        const baseUrl = API_BASE_URL || 'http://localhost:3000';
+        // Extract the path after the R2 domain
+        const urlParts = src.split('pub-5d6eb9dacf9146a2bd3bff425e11c1b2.r2.dev/')[1];
+        if (urlParts) {
+            // Remove any existing version parameters
+            const cleanPath = urlParts.split('?')[0];
+            const proxiedUrl = `${baseUrl}/api/image/${cleanPath}`;
+            
+            // Add cache-busting for mobile data connections or when forced
+            if (forceCacheBust || isMobileData) {
+                return `${proxiedUrl}?v=${Date.now()}`;
+            }
+            return proxiedUrl;
+        }
+    }
+    
+    // Return as-is if already a complete URL (not R2)
     if (src.startsWith('http://') || src.startsWith('https://') || src.startsWith('data:')) {
         // Add cache-busting for mobile data connections or when forced
         if (forceCacheBust || isMobileData) {
-            const separator = src.includes('?') ? '&' : '?';
-            return `${src}${separator}v=${Date.now()}`;
+            // Check if URL already has version parameter
+            if (src.includes('?v=')) {
+                // Replace existing version parameter instead of adding another
+                return src.replace(/[?&]v=\d+/g, '') + `?v=${Date.now()}`;
+            } else {
+                const separator = src.includes('?') ? '&' : '?';
+                return `${src}${separator}v=${Date.now()}`;
+            }
         }
         return src;
     }
@@ -2091,6 +2115,9 @@ function updateUploadZone() {
         h4.textContent = 'Drop images here or click to upload';
         input.disabled = false;
     }
+    
+    // Log for debugging
+    console.log(`📦 Upload zone updated: ${memories.length}/${MAX_IMAGES} images (Premium: ${IS_PREMIUM})`);
 }
 
 // Add a flag to prevent multiple file dialog opens
@@ -2295,7 +2322,7 @@ async function uploadImageWithRetry(imageData, memoryId, fileName, maxRetries = 
     const connection = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
     const isSlowConnection = connection && (connection.effectiveType === 'slow-2g' || connection.effectiveType === '2g');
     
-    // Adjust timeout based on connection
+    // Adjust timeout based on connection type
     const timeout = isSlowConnection ? 60000 : 30000; // 60s for slow connections, 30s for others
     
     for (let attempt = 1; attempt <= maxRetries; attempt++) {

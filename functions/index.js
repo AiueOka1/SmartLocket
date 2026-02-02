@@ -6,7 +6,6 @@ const cors = require("cors");
 const admin = require("firebase-admin");
 const bcrypt = require("bcryptjs"); // Add bcrypt import
 const nodemailer = require("nodemailer");
-const {S3Client} = require("@aws-sdk/client-s3");
 
 // Import shared routes
 const {setupRoutes} = require("./shared/routes");

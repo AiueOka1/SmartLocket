@@ -70,6 +70,57 @@ function setupRoutes(app, db, admin, r2Client, transporter, bcrypt) {
     res.json({status: "ok"});
   });
 
+  // Image proxy route - serves R2 images with proper CORS headers
+  app.get(["/api/image/*", "/image/*"], async (req, res) => {
+    try {
+      // Get the image path from the URL
+      const imagePath = req.params[0]; // Get everything after /api/image/
+      
+      // Construct R2 URL
+      const r2BaseUrl = process.env.R2_PUBLIC_URL || 'https://pub-5d6eb9dacf9146a2bd3bff425e11c1b2.r2.dev';
+      const imageUrl = `${r2BaseUrl}/${imagePath}`;
+      
+      console.log(`📸 Proxying image: ${imageUrl}`);
+      
+      // Fetch image from R2
+      const response = await fetch(imageUrl);
+      
+      if (!response.ok) {
+        console.log(`❌ R2 fetch failed: ${response.status} ${response.statusText}`);
+        return res.status(response.status).json({ 
+          error: 'Image not found',
+          status: response.status,
+          statusText: response.statusText,
+          url: imageUrl
+        });
+      }
+      
+      // Get image buffer
+      const imageBuffer = await response.arrayBuffer();
+      const contentType = response.headers.get('content-type') || 'image/jpeg';
+      
+      // Set CORS headers and content type
+      res.set({
+        'Content-Type': contentType,
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Methods': 'GET, HEAD, OPTIONS',
+        'Access-Control-Allow-Headers': 'Origin, X-Requested-With, Content-Type, Accept, Authorization',
+        'Cache-Control': 'public, max-age=31536000', // Cache for 1 year
+        'Content-Length': imageBuffer.byteLength
+      });
+      
+      // Send image data
+      res.send(Buffer.from(imageBuffer));
+      
+    } catch (error) {
+      console.error('❌ Image proxy error:', error);
+      res.status(500).json({ 
+        error: 'Failed to fetch image',
+        message: error.message
+      });
+    }
+  });
+
   // Serve uploaded files locally
   app.use('/uploads', (req, res, next) => {
     const fs = require('fs');
