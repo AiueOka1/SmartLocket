@@ -702,11 +702,19 @@ function setupRoutes(app, db, admin, r2Client, transporter, bcrypt) {
           const url = `${publicUrl}/${key}`;
           return res.json({ success: true, url });
         } catch (r2Error) {
-          console.log("R2 upload failed, using local storage");
+          console.error("R2 upload failed:", r2Error);
+          // For production environments (Firebase Functions), don't fall back to local storage
+          if (process.env.FUNCTIONS_EMULATOR !== 'true' && !process.env.NODE_ENV?.includes('development')) {
+            return res.status(500).json({
+              success: false, 
+              message: "Image upload failed - cloud storage unavailable"
+            });
+          }
+          console.log("R2 upload failed, using local storage fallback");
         }
       }
       
-      // Local storage fallback
+      // Local storage fallback (only for development)
       const fs = require('fs');
       const path = require('path');
       
