@@ -50,10 +50,18 @@ function createOptimizedImage(src, alt = '', className = '') {
                 this.src = `${baseUrl}/api/image/${imagePath}?fallback=${Date.now()}`;
                 return;
             }
-        } else if (this.src.includes('/api/image/')) {
-            console.log('🔧 API proxy failed, using placeholder...');
-            this.src = 'https://via.placeholder.com/800x500/6366f1/ffffff?text=' + encodeURIComponent('Image Loading...');
-            this.style.filter = 'blur(2px)';
+        } else if (this.src.includes('/api/image/') || this.src.includes('via.placeholder.com')) {
+            console.log('🔧 All external sources failed, using local placeholder...');
+            // Create local placeholder using data URL - no external dependencies
+            this.src = 'data:image/svg+xml;base64,' + btoa(`
+                <svg width="800" height="500" xmlns="http://www.w3.org/2000/svg">
+                    <rect width="100%" height="100%" fill="#6366f1"/>
+                    <text x="50%" y="45%" font-family="Arial, sans-serif" font-size="24" fill="white" text-anchor="middle">Image Loading...</text>
+                    <text x="50%" y="60%" font-family="Arial, sans-serif" font-size="16" fill="#e0e7ff" text-anchor="middle">Check your connection</text>
+                </svg>
+            `);
+            this.style.filter = 'blur(1px)';
+            this.style.opacity = '0.7';
             return;
         }
         console.error(`Failed to load image: ${this.src}`);
@@ -922,10 +930,11 @@ function initializeSwiper() {
                             const imagePath = this.src.split('pub-5d6eb9dacf9146a2bd3bff425e11c1b2.r2.dev/')[1].split('?')[0];
                             const baseUrl = '${API_BASE_URL}';
                             this.src = baseUrl + '/api/image/' + imagePath + '?fallback=' + Date.now();
-                        } else if (this.src.includes('/api/image/')) {
-                            console.log('🔧 API proxy failed, using placeholder...');
-                            this.src = 'https://via.placeholder.com/800x500/6366f1/ffffff?text=' + encodeURIComponent('Image Loading...');
-                            this.style.filter = 'blur(2px)';
+                        } else if (this.src.includes('/api/image/') || this.src.includes('via.placeholder.com')) {
+                            console.log('🔧 All external sources failed, using local placeholder...');
+                            this.src = 'data:image/svg+xml;base64,' + btoa('<svg width=\"800\" height=\"500\" xmlns=\"http://www.w3.org/2000/svg\"><rect width=\"100%\" height=\"100%\" fill=\"#6366f1\"/><text x=\"50%\" y=\"45%\" font-family=\"Arial, sans-serif\" font-size=\"24\" fill=\"white\" text-anchor=\"middle\">Image Loading...</text><text x=\"50%\" y=\"60%\" font-family=\"Arial, sans-serif\" font-size=\"16\" fill=\"#e0e7ff\" text-anchor=\"middle\">Check your connection</text></svg>');
+                            this.style.filter = 'blur(1px)';
+                            this.style.opacity = '0.7';
                         } else {
                             console.error('❌ Failed to load image:', this.src); 
                             this.style.display='none';
