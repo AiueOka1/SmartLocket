@@ -50,6 +50,11 @@ function createOptimizedImage(src, alt = '', className = '') {
                 this.src = `${baseUrl}/api/image/${imagePath}?fallback=${Date.now()}`;
                 return;
             }
+        } else if (this.src.includes('/api/image/')) {
+            console.log('🔧 API proxy failed, using placeholder...');
+            this.src = 'https://via.placeholder.com/800x500/6366f1/ffffff?text=' + encodeURIComponent('Image Loading...');
+            this.style.filter = 'blur(2px)';
+            return;
         }
         console.error(`Failed to load image: ${this.src}`);
         this.style.display = 'none';
@@ -917,6 +922,10 @@ function initializeSwiper() {
                             const imagePath = this.src.split('pub-5d6eb9dacf9146a2bd3bff425e11c1b2.r2.dev/')[1].split('?')[0];
                             const baseUrl = '${API_BASE_URL}';
                             this.src = baseUrl + '/api/image/' + imagePath + '?fallback=' + Date.now();
+                        } else if (this.src.includes('/api/image/')) {
+                            console.log('🔧 API proxy failed, using placeholder...');
+                            this.src = 'https://via.placeholder.com/800x500/6366f1/ffffff?text=' + encodeURIComponent('Image Loading...');
+                            this.style.filter = 'blur(2px)';
                         } else {
                             console.error('❌ Failed to load image:', this.src); 
                             this.style.display='none';
