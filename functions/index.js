@@ -56,9 +56,10 @@ const transporter = nodemailer.createTransport({
 const app = express();
 
 const allowedOrigins = [
-  "https://aiueoka1.github.io",
-  "https://smartlocket.com",
-  "https://www.smartlocket.com", 
+  "https://smartlocket.win",
+  "https://www.smartlocket.win", 
+  "https://api.smartlocket.win",
+  "https://assets.smartlocket.win",
   "https://nfcchain.web.app",
   "https://nfcchain.firebaseapp.com",
   "http://localhost:3000",

@@ -16,11 +16,11 @@ function debugLog(...args) {
 // Get LOCKED URLs from config.js - DO NOT HARDCODE URLs HERE!
 
 // Get API_BASE_URL from LOCKED config
-const API_BASE_URL = window.API_BASE_URL || window.LOCKED_CONFIG?.API_PRODUCTION || 'https://api-vcdrn5osga-uc.a.run.app';
+const API_BASE_URL = window.API_BASE_URL || window.LOCKED_CONFIG?.API_PRODUCTION || 'https://api.smartlocket.win';
 
 // 🔥 MOBILE CARRIER BYPASS - Cloudflare Worker Assets Relay
-// GitHub Pages + Firebase + R2 Setup - Your deployed worker:
-const ASSETS_RELAY_URL = 'https://smartlocket-asset.somarious2.workers.dev';
+// SmartLocket.win + Firebase + R2 Setup - Your deployed worker:
+const ASSETS_RELAY_URL = 'https://assets.smartlocket.win';
 // Alternative options for future:
 // const ASSETS_RELAY_URL = 'https://cdn.yourdomain.com'; // Custom domain
 // const ASSETS_RELAY_URL = 'https://your-project.web.app/assets'; // Firebase domain

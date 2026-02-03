@@ -70,6 +70,73 @@ function setupRoutes(app, db, admin, r2Client, transporter, bcrypt) {
     res.json({status: "ok"});
   });
 
+  // Image proxy route - serves R2 images with proper CORS headers
+  app.get(["/api/image/*", "/image/*"], async (req, res) => {
+    try {
+      // Get the image path from the URL
+      const imagePath = req.params[0]; // Get everything after /api/image/
+      
+      // 🔒 LOCKED - Construct R2 URL using LOCKED configuration
+      const r2BaseUrl = process.env.R2_PUBLIC_URL || 'https://pub-5d6eb9dacf9146a2bd3bff425e11c1b2.r2.dev';
+      const imageUrl = `${r2BaseUrl}/${imagePath}`;
+      
+      console.log(`📸 Proxying image: ${imageUrl}`);
+      
+      // Fetch image from R2
+      const response = await fetch(imageUrl);
+      
+      if (!response.ok) {
+        console.log(`❌ R2 fetch failed: ${response.status} ${response.statusText}`);
+        return res.status(response.status).json({ 
+          error: 'Image not found',
+          status: response.status,
+          statusText: response.statusText,
+          url: imageUrl
+        });
+      }
+      
+      // Get image buffer
+      const imageBuffer = await response.arrayBuffer();
+      const contentType = response.headers.get('content-type') || 'image/jpeg';
+      
+      // Set CORS headers and content type
+      res.set({
+        'Content-Type': contentType,
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Methods': 'GET, HEAD, OPTIONS',
+        'Access-Control-Allow-Headers': 'Origin, X-Requested-With, Content-Type, Accept, Authorization',
+        'Cache-Control': 'public, max-age=31536000', // Cache for 1 year
+        'Content-Length': imageBuffer.byteLength
+      });
+      
+      // Send image data
+      res.send(Buffer.from(imageBuffer));
+      
+    } catch (error) {
+      console.error('❌ Image proxy error:', error);
+      res.status(500).json({ 
+        error: 'Failed to fetch image',
+        message: error.message
+      });
+    }
+  });
+
+  // Serve uploaded files locally
+  app.use('/uploads', (req, res, next) => {
+    const fs = require('fs');
+    const path = require('path');
+    const filename = req.url.replace('/', '');
+    const filePath = path.join(__dirname, '../backend/uploads', filename);
+    
+    if (fs.existsSync(filePath)) {
+      res.setHeader('Content-Type', 'image/jpeg');
+      res.setHeader('Cache-Control', 'public, max-age=31536000');
+      res.sendFile(path.resolve(filePath));
+    } else {
+      res.status(404).json({error: 'Image not found'});
+    }
+  });
+
   // Admin stats
   app.get(["/api/admin/stats", "/admin/stats"], async (req, res) => {
     try {
@@ -204,7 +271,7 @@ function setupRoutes(app, db, admin, r2Client, transporter, bcrypt) {
           activatedAt: null,
           orderId: null,
           customerName: null,
-          viewUrl: `https://smartlocket.com/m/\${memoryId}`,
+          viewUrl: `https://smartlocket.win/m/\${memoryId}`,
 
           // Gallery defaults
           galleryTitle: "SmartLocket Gallery",
@@ -543,7 +610,7 @@ function setupRoutes(app, db, admin, r2Client, transporter, bcrypt) {
               <p>Your personal memory gallery has been successfully activated.</p>
               <div style="background: #f3f4f6; padding: 20px; border-radius: 10px; margin: 20px 0;">
                 <p style="margin: 0;"><strong>SmartLocket ID:</strong> ${memoryId}</p>
-                <p style="margin: 10px 0 0 0;"><strong>Access URL:</strong> <a href="https://smartlocket.com/m/${memoryId}">smartlocket.com/m/${memoryId}</a></p>
+                <p style="margin: 10px 0 0 0;"><strong>Access URL:</strong> <a href="https://smartlocket.win/m/${memoryId}">smartlocket.win/m/${memoryId}</a></p>
               </div>
               <p><strong>Important:</strong> Save your passcode securely. You'll need it to edit your gallery.</p>
             </div>
@@ -673,21 +740,49 @@ function setupRoutes(app, db, admin, r2Client, transporter, bcrypt) {
       const key = `${memoryId}/${Date.now()}.${ext}`;
 
       if (r2Client && PutObjectCommand) {
-        await r2Client.send(new PutObjectCommand({
-          Bucket: process.env.R2_BUCKET_NAME || "nfcchain",
-          Key: key,
-          Body: buffer,
-          ContentType: "image/jpeg",
-          CacheControl: "public, max-age=31536000",
-        }));
+        try {
+          await r2Client.send(new PutObjectCommand({
+            Bucket: process.env.R2_BUCKET_NAME || "nfcchain",
+            Key: key,
+            Body: buffer,
+            ContentType: "image/jpeg",
+            CacheControl: "public, max-age=31536000",
+          }));
 
-        const publicUrl = process.env.R2_PUBLIC_URL || "https://pub-5d6eb9dacf9146a2bd3bff425e11c1b2.r2.dev";
-        const url = `${publicUrl}/${key}`;
-        return res.json({ success: true, url });
-      } else {
-        // Fallback for environments without R2
-        return res.json({ success: true, url: "placeholder-url" });
+          // 🔒 LOCKED - Use LOCKED R2 public URL
+          const publicUrl = process.env.R2_PUBLIC_URL || "https://pub-5d6eb9dacf9146a2bd3bff425e11c1b2.r2.dev";
+          const url = `${publicUrl}/${key}`;
+          return res.json({ success: true, url });
+        } catch (r2Error) {
+          console.error("R2 upload failed:", r2Error);
+          // For production environments (Firebase Functions), don't fall back to local storage
+          if (process.env.FUNCTIONS_EMULATOR !== 'true' && !process.env.NODE_ENV?.includes('development')) {
+            return res.status(500).json({
+              success: false, 
+              message: "Image upload failed - cloud storage unavailable"
+            });
+          }
+          console.log("R2 upload failed, using local storage fallback");
+        }
       }
+      
+      // Local storage fallback (only for development)
+      const fs = require('fs');
+      const path = require('path');
+      
+      const uploadsDir = path.join(__dirname, '../backend/uploads');
+      if (!fs.existsSync(uploadsDir)) {
+        fs.mkdirSync(uploadsDir, { recursive: true });
+      }
+      
+      const localFileName = `${memoryId}_${Date.now()}.${ext}`;
+      const localFilePath = path.join(uploadsDir, localFileName);
+      
+      fs.writeFileSync(localFilePath, buffer);
+      
+      const localUrl = `http://localhost:3000/uploads/${localFileName}`;
+      return res.json({ success: true, url: localUrl });
+      
     } catch (err) {
       console.error(err);
       return res.status(500).json({message: "Upload failed"});

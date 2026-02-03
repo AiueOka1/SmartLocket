@@ -271,7 +271,7 @@ function setupRoutes(app, db, admin, r2Client, transporter, bcrypt) {
           activatedAt: null,
           orderId: null,
           customerName: null,
-          viewUrl: `https://smartlocket.com/m/\${memoryId}`,
+          viewUrl: `https://smartlocket.win/m/\${memoryId}`,
 
           // Gallery defaults
           galleryTitle: "SmartLocket Gallery",
@@ -610,7 +610,7 @@ function setupRoutes(app, db, admin, r2Client, transporter, bcrypt) {
               <p>Your personal memory gallery has been successfully activated.</p>
               <div style="background: #f3f4f6; padding: 20px; border-radius: 10px; margin: 20px 0;">
                 <p style="margin: 0;"><strong>SmartLocket ID:</strong> ${memoryId}</p>
-                <p style="margin: 10px 0 0 0;"><strong>Access URL:</strong> <a href="https://smartlocket.com/m/${memoryId}">smartlocket.com/m/${memoryId}</a></p>
+                <p style="margin: 10px 0 0 0;"><strong>Access URL:</strong> <a href="https://smartlocket.win/m/${memoryId}">smartlocket.win/m/${memoryId}</a></p>
               </div>
               <p><strong>Important:</strong> Save your passcode securely. You'll need it to edit your gallery.</p>
             </div>
