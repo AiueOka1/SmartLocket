@@ -341,7 +341,7 @@
         }
 
         function goToGallery() {
-            window.location.href = `/NFCchain.html?id=${memoryId}`;
+            window.location.href = `/smartlocket.html?id=${memoryId}`;
         }
 
         // Check if already activated
@@ -362,7 +362,7 @@
 
                 if (data.status === 'activated') {
                     // Already activated, redirect to gallery
-                    window.location.href = `/SmartLocket/public/gallery.html?id=${memoryId}`;
+                    window.location.href = `/public/gallery.html?id=${memoryId}`;
                 }
             } catch (error) {
                 console.error('Error checking activation status:', error);

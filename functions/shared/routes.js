@@ -232,7 +232,7 @@ function setupRoutes(app, db, admin, r2Client, transporter, bcrypt) {
   });
 
   // Generate batch
-  app.post("/api/admin/generate-batch", async (req, res) => {
+  app.post(["/api/admin/generate-batch", "/admin/generate-batch"], async (req, res) => {
     const {quantity, photoLimit, prefix, premium} = req.body;
 
     try {
@@ -271,7 +271,7 @@ function setupRoutes(app, db, admin, r2Client, transporter, bcrypt) {
           activatedAt: null,
           orderId: null,
           customerName: null,
-          viewUrl: `https://smartlocket.win/m/\${memoryId}`,
+          viewUrl: `https://smartlocket.win/public/gallery.html?id=${memoryId}`,
 
           // Gallery defaults
           galleryTitle: "SmartLocket Gallery",
@@ -328,8 +328,92 @@ function setupRoutes(app, db, admin, r2Client, transporter, bcrypt) {
     }
   });
 
+  // Get next unused SmartLocket
+  app.get(["/api/admin/next-unused", "/admin/next-unused"], async (req, res) => {
+    try {
+      const snapshot = await db.collection("nfcChains")
+        .where("status", "==", "unused")
+        .limit(1)
+        .get();
+
+      if (snapshot.empty) {
+        return res.status(404).json({
+          success: false,
+          message: "No unused SmartLockets available",
+        });
+      }
+
+      const doc = snapshot.docs[0];
+      const data = doc.data();
+
+      return res.json({
+        success: true,
+        smartLocket: {
+          memoryId: data.memoryId || doc.id,
+          status: data.status,
+          premium: data.premium || false,
+          photoLimit: data.photoLimit || 5,
+          createdAt: formatTimestamp(data.createdAt),
+        },
+      });
+    } catch (error) {
+      console.error("Next unused error:", error);
+      return res.status(500).json({
+        success: false,
+        message: "Failed to get next unused SmartLocket",
+      });
+    }
+  });
+
+  // Assign order to SmartLocket
+  app.post(["/api/admin/assign-order", "/admin/assign-order"], async (req, res) => {
+    const { memoryId, orderId, customerName, email } = req.body;
+
+    if (!memoryId || !orderId) {
+      return res.status(400).json({
+        success: false,
+        message: "Memory ID and Order ID are required",
+      });
+    }
+
+    try {
+      const docRef = db.collection("nfcChains").doc(memoryId);
+      const doc = await docRef.get();
+
+      if (!doc.exists) {
+        return res.status(404).json({
+          success: false,
+          message: "SmartLocket not found",
+        });
+      }
+
+      const updateData = {
+        orderId,
+        assignedAt: admin.firestore.FieldValue.serverTimestamp(),
+      };
+
+      if (customerName) updateData.customerName = customerName;
+      if (email) updateData.email = email;
+
+      await docRef.update(updateData);
+
+      return res.json({
+        success: true,
+        message: "Order assigned successfully",
+        memoryId,
+        orderId,
+      });
+    } catch (error) {
+      console.error("Assign order error:", error);
+      return res.status(500).json({
+        success: false,
+        message: "Failed to assign order",
+      });
+    }
+  });
+
   // Mark as written
-  app.post(["/api/admin/mark-written/:memoryId"], async (req, res) => {
+  app.post(["/api/admin/mark-written/:memoryId", "/admin/mark-written/:memoryId"], async (req, res) => {
     const {memoryId} = req.params;
 
     try {

@@ -303,14 +303,14 @@ async function loadGalleryData() {
         }
         // Check if activated - redirect if not
         if (data.status === 'unused' || data.status === 'written' || data.status === 'shipped') {
-            console.log(`NFCchain status: ${data.status}, redirecting to activation...`);
+            console.log(`SmartLocket status: ${data.status}, redirecting to activation...`);
             // Redirect to activation without showing alert
             window.location.href = 'activate.html?id=' + MEMORY_ID;
             return null;
         }
         if (data.status !== 'activated') {
             // Any other non-activated status
-            console.log(`NFCchain not activated (status: ${data.status}), redirecting...`);
+            console.log(`SmartLocket not activated (status: ${data.status}), redirecting...`);
             window.location.href = 'activate.html?id=' + MEMORY_ID;
             return null;
         }
