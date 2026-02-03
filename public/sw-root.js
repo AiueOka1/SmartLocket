@@ -1,15 +1,15 @@
 // SmartLocket Service Worker for Enhanced Mobile Performance
-const CACHE_NAME = 'smartlocket-v1.2';
+const CACHE_NAME = 'smartlocket-v1.3';
 const CACHE_URLS = [
-    '/SmartLocket/public/gallery.html',
-    '/SmartLocket/public/activate.html',
-    '/SmartLocket/public/activate-style.css',
-    '/SmartLocket/src/style.css',
-    '/SmartLocket/src/script.js',
-    '/SmartLocket/src/config.js',
-    '/SmartLocket/src/activate-script.js',
-    '/SmartLocket/resources/chain.png',
-    '/SmartLocket/resources/phone.png'
+    '/public/gallery.html',
+    '/public/activate.html',
+    '/public/activate-style.css',
+    '/src/style.css',
+    '/src/script.js',
+    '/src/config.js',
+    '/src/activate-script.js',
+    '/resources/chain.png',
+    '/resources/phone.png'
 ];
 
 // Network-first strategy for API calls, Cache-first for static assets
@@ -206,8 +206,8 @@ self.addEventListener('push', event => {
         
         const options = {
             body: data.body || 'New update available',
-            icon: '/SmartLocket/resources/chain.png',
-            badge: '/SmartLocket/resources/chain.png',
+            icon: '/resources/chain.png',
+            badge: '/resources/chain.png',
             tag: 'smartlocket-update',
             requireInteraction: false
         };

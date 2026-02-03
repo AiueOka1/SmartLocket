@@ -1,5 +1,5 @@
 // SmartLocket Service Worker for Enhanced Mobile Performance
-const CACHE_NAME = 'smartlocket-v1.2';
+const CACHE_NAME = 'smartlocket-v1.3';
 const CACHE_URLS = [
     '/gallery.html',
     '/activate.html',
@@ -206,8 +206,8 @@ self.addEventListener('push', event => {
         
         const options = {
             body: data.body || 'New update available',
-            icon: '/SmartLocket/resources/chain.png',
-            badge: '/SmartLocket/resources/chain.png',
+            icon: '/resources/chain.png',
+            badge: '/resources/chain.png',
             tag: 'smartlocket-update',
             requireInteraction: false
         };
