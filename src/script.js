@@ -16,7 +16,7 @@ function debugLog(...args) {
 // Get LOCKED URLs from config.js - DO NOT HARDCODE URLs HERE!
 
 // Get API_BASE_URL from LOCKED config
-const API_BASE_URL = window.API_BASE_URL || window.LOCKED_CONFIG?.API_PRODUCTION || 'https://api.smartlocket.win';
+const API_BASE_URL = window.API_BASE_URL || window.LOCKED_CONFIG?.API_PRODUCTION || 'https://api-vcdrn5osga-uc.a.run.app';
 
 // 🔥 MOBILE CARRIER BYPASS - Cloudflare Worker Assets Relay
 // SmartLocket.win + Firebase + R2 Setup - Your deployed worker:

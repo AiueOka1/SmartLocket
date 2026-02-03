@@ -9,7 +9,7 @@ const LOCKED_CONFIG = {
     R2_BUCKET: 'nfcchain',
     
     // 🚀 API ENDPOINTS - LOCKED
-    API_PRODUCTION: 'https://api.smartlocket.win',
+    API_PRODUCTION: 'https://api-vcdrn5osga-uc.a.run.app',
     API_LOCAL: 'http://localhost:3000',
     
     // 🌍 FRONTEND DOMAINS - LOCKED

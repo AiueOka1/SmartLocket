@@ -57,8 +57,7 @@ const app = express();
 
 const allowedOrigins = [
   "https://smartlocket.win",
-  "https://www.smartlocket.win", 
-  "https://api.smartlocket.win",
+  "https://www.smartlocket.win",
   "https://assets.smartlocket.win",
   "https://nfcchain.web.app",
   "https://nfcchain.firebaseapp.com",
