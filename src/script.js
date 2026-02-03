@@ -20,7 +20,7 @@ const API_BASE_URL = window.API_BASE_URL || window.LOCKED_CONFIG?.API_PRODUCTION
 
 // 🔥 MOBILE CARRIER BYPASS - Cloudflare Worker Assets Relay
 // SmartLocket.win + Firebase + R2 Setup - Your deployed worker:
-const ASSETS_RELAY_URL = 'https://assets.smartlocket.win';
+const ASSETS_RELAY_URL = 'https://smartlocket-asset.somarious2.workers.dev';
 // Alternative options for future:
 // const ASSETS_RELAY_URL = 'https://cdn.yourdomain.com'; // Custom domain
 // const ASSETS_RELAY_URL = 'https://your-project.web.app/assets'; // Firebase domain

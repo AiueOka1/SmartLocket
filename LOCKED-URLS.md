@@ -11,7 +11,7 @@ R2 Public URL:    https://pub-5d6eb9dacf9146a2bd3bff425e11c1b2.r2.dev
 R2 S3 Endpoint:   https://cfb74f6c6f03ae746b61558cfd98e44d.r2.cloudflarestorage.com
 API Production:   https://api-vcdrn5osga-uc.a.run.app
 Frontend Domain:  https://smartlocket.win
-Assets Relay:     https://assets.smartlocket.win
+Assets Relay:     https://smartlocket-asset.somarious2.workers.dev
 ```
 
 ### 🏠 LOCAL URLS (LOCKED)
