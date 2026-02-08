@@ -53,6 +53,51 @@ function generateVerificationCode() {
  * @param {Object} bcrypt - bcrypt/bcryptjs module
  */
 function setupRoutes(app, db, admin, r2Client, transporter, bcrypt) {
+  // --------------------
+  // URL Rewriting Middleware - Remove .html extensions
+  // --------------------
+  // Remove trailing slash
+  app.use((req, res, next) => {
+    if (req.path !== '/' && req.path.endsWith('/')) {
+      return res.redirect(301, req.path.slice(0, -1) + req.url.slice(req.path.length));
+    }
+    next();
+  });
+
+  // Redirect .html URLs to extensionless versions
+  app.use((req, res, next) => {
+    if (req.path.endsWith('.html')) {
+      const newPath = req.path.slice(0, -5); // Remove .html
+      return res.redirect(301, newPath + (req.url.slice(req.path.length) || ''));
+    }
+    next();
+  });
+
+  // Handle extensionless URLs by serving corresponding .html files
+  app.use((req, res, next) => {
+    if (!req.path.includes('.') && !req.path.startsWith('/api/')) {
+      // Try to serve the corresponding .html file
+      const path = require('path');
+      const fs = require('fs');
+      
+      // Check if we're in a subdirectory like /public/ or /admin/
+      let htmlPath;
+      if (req.path.startsWith('/public/')) {
+        htmlPath = path.join(__dirname, '../../public', req.path.replace('/public/', '') + '.html');
+      } else if (req.path.startsWith('/admin/')) {
+        htmlPath = path.join(__dirname, '../../admin', req.path.replace('/admin/', '') + '.html');
+      } else {
+        htmlPath = path.join(__dirname, '../../public', req.path + '.html');
+      }
+      
+      // Check if the HTML file exists
+      if (fs.existsSync(htmlPath)) {
+        return res.sendFile(htmlPath);
+      }
+    }
+    next();
+  });
+
   // Import AWS SDK components for Cloudflare R2
   let PutObjectCommand, DeleteObjectCommand;
   if (r2Client) {
@@ -207,7 +252,7 @@ function setupRoutes(app, db, admin, r2Client, transporter, bcrypt) {
           photoLimit: data.photoLimit || 0,
           orderId: data.orderId || null,
           email: data.email || null,
-          viewUrl: data.viewUrl || `https://smartlocket.win/public/gallery.html?id=${data.memoryId || doc.id}`,
+          viewUrl: data.viewUrl || `https://smartlocket.win/public/gallery?id=${data.memoryId || doc.id}`,
           createdAt: data.createdAt ? formatTimestamp(data.createdAt) : null,
           activatedAt: data.activatedAt ? formatTimestamp(data.activatedAt) : null,
         });
@@ -272,7 +317,7 @@ function setupRoutes(app, db, admin, r2Client, transporter, bcrypt) {
           activatedAt: null,
           orderId: null,
           customerName: null,
-          viewUrl: `https://smartlocket.win/public/gallery.html?id=${memoryId}`,
+          viewUrl: `https://smartlocket.win/public/gallery?id=${memoryId}`,
 
           // Gallery defaults
           galleryTitle: "SmartLocket Gallery",
@@ -611,7 +656,7 @@ function setupRoutes(app, db, admin, r2Client, transporter, bcrypt) {
               <p style="color: #000000;">Your personal memory gallery has been successfully activated.</p>
               <div style="background: #ffffff; border: 1px solid #000000; padding: 20px; margin: 20px 0;">
                 <p style="margin: 0; color: #000000;"><strong>SmartLocket ID:</strong> ${memoryId}</p>
-                <p style="margin: 10px 0 0 0; color: #000000;"><strong>Access URL:</strong> <a href="https://smartlocket.win/public/gallery.html?id=${memoryId}" style="color: #000000;">smartlocket.win/public/gallery.html?id=${memoryId}</a></p>
+                <p style="margin: 10px 0 0 0; color: #000000;"><strong>Access URL:</strong> <a href="https://smartlocket.win/public/gallery?id=${memoryId}" style="color: #000000;">smartlocket.win/public/gallery?id=${memoryId}</a></p>
               </div>
               <p style="color: #000000;"><strong>Important:</strong> Save your passcode securely. You will need it to edit your gallery.</p>
             </div>

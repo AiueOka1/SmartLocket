@@ -325,7 +325,7 @@ async function loadInventory() {
             inventory.forEach(item => {
                 const row = document.createElement('tr');
                 // Use the viewUrl from Firebase data instead of constructing it
-                const viewUrl = item.viewUrl || `https://smartlocket.win/public/gallery.html?id=${item.memoryId}`;
+                const viewUrl = item.viewUrl || `https://smartlocket.win/public/gallery?id=${item.memoryId}`;
                 row.innerHTML = `
                     <td><strong>${item.memoryId}</strong></td>
                     <td><span class="status-badge ${item.status}">${item.status}</span></td>

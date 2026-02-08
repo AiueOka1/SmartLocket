@@ -207,7 +207,7 @@ function setupRoutes(app, db, admin, r2Client, transporter, bcrypt) {
           photoLimit: data.photoLimit || 0,
           orderId: data.orderId || null,
           email: data.email || null,
-          viewUrl: data.viewUrl || `https://smartlocket.win/public/gallery.html?id=${data.memoryId || doc.id}`,
+          viewUrl: data.viewUrl || `https://smartlocket.win/public/gallery?id=${data.memoryId || doc.id}`,
           createdAt: data.createdAt ? formatTimestamp(data.createdAt) : null,
           activatedAt: data.activatedAt ? formatTimestamp(data.activatedAt) : null,
         });
@@ -272,7 +272,7 @@ function setupRoutes(app, db, admin, r2Client, transporter, bcrypt) {
           activatedAt: null,
           orderId: null,
           customerName: null,
-          viewUrl: `https://smartlocket.win/public/gallery.html?id=${memoryId}`,
+          viewUrl: `https://smartlocket.win/public/gallery?id=${memoryId}`,
 
           // Gallery defaults
           galleryTitle: "SmartLocket Gallery",
@@ -611,7 +611,7 @@ function setupRoutes(app, db, admin, r2Client, transporter, bcrypt) {
               <p style="color: #000000;">Your personal memory gallery has been successfully activated.</p>
               <div style="background: #ffffff; border: 1px solid #000000; padding: 20px; margin: 20px 0;">
                 <p style="margin: 0; color: #000000;"><strong>SmartLocket ID:</strong> ${memoryId}</p>
-                <p style="margin: 10px 0 0 0; color: #000000;"><strong>Access URL:</strong> <a href="https://smartlocket.win/public/gallery.html?id=${memoryId}" style="color: #000000;">smartlocket.win/public/gallery.html?id=${memoryId}</a></p>
+                <p style="margin: 10px 0 0 0; color: #000000;"><strong>Access URL:</strong> <a href="https://smartlocket.win/public/gallery?id=${memoryId}" style="color: #000000;">smartlocket.win/public/gallery?id=${memoryId}</a></p>
               </div>
               <p style="color: #000000;"><strong>Important:</strong> Save your passcode securely. You will need it to edit your gallery.</p>
             </div>

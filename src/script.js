@@ -290,7 +290,7 @@ async function loadGalleryData() {
             if (response.status === 404) {
                 // NFCchain not found - redirect to activation
                 console.log('NFCchain not found, redirecting to activation...');
-                window.location.href = 'activate.html?id=' + MEMORY_ID;
+                window.location.href = 'activate?id=' + MEMORY_ID;
                 return null;
             }
             throw new Error('Failed to load gallery data');
@@ -305,13 +305,13 @@ async function loadGalleryData() {
         if (data.status === 'unused' || data.status === 'written' || data.status === 'shipped') {
             console.log(`SmartLocket status: ${data.status}, redirecting to activation...`);
             // Redirect to activation without showing alert
-            window.location.href = 'activate.html?id=' + MEMORY_ID;
+            window.location.href = 'activate?id=' + MEMORY_ID;
             return null;
         }
         if (data.status !== 'activated') {
             // Any other non-activated status
             console.log(`SmartLocket not activated (status: ${data.status}), redirecting...`);
-            window.location.href = 'activate.html?id=' + MEMORY_ID;
+            window.location.href = 'activate?id=' + MEMORY_ID;
             return null;
         }
         // SmartLocket is activated - load images into memories array
