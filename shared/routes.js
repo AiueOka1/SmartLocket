@@ -733,9 +733,50 @@ function setupRoutes(app, db, admin, r2Client, transporter, bcrypt) {
       return res.status(400).json({message: "Missing image data"});
     }
 
+    // 🚫 STRICT FILE TYPE VALIDATION - Server-side validation
+    if (fileName) {
+      const ext = fileName.split(".").pop().toLowerCase();
+      const allowedExtensions = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp', 'svg'];
+      const videoExtensions = ['mp4', 'mov', 'avi', 'mkv', 'wmv', 'flv', 'webm', 'm4v'];
+      const audioExtensions = ['mp3', 'wav', 'aac', 'm4a', 'ogg', 'wma', 'flac'];
+      
+      // Reject video and audio files explicitly
+      if (videoExtensions.includes(ext) || audioExtensions.includes(ext)) {
+        return res.status(400).json({
+          success: false,
+          message: `Video and audio files are not supported. File: ${fileName}`
+        });
+      }
+      
+      // Only allow image extensions
+      if (!allowedExtensions.includes(ext)) {
+        return res.status(400).json({
+          success: false,
+          message: `Only image files are supported (JPG, PNG, GIF, WEBP, BMP, SVG). File: ${fileName}`
+        });
+      }
+    }
+
+    // Validate image data format
+    if (!imageData.startsWith('data:image/')) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid image data format"
+      });
+    }
+
     try {
       const base64 = imageData.replace(/^data:image\/\w+;base64,/, "");
       const buffer = Buffer.from(base64, "base64");
+      
+      // Check file size (limit to 10MB)
+      if (buffer.length > 10 * 1024 * 1024) {
+        return res.status(400).json({
+          success: false,
+          message: "File too large. Maximum size is 10MB."
+        });
+      }
+      
       const ext = fileName ? fileName.split(".").pop() : "jpg";
       const key = `${memoryId}/${Date.now()}.${ext}`;
 
@@ -745,14 +786,25 @@ function setupRoutes(app, db, admin, r2Client, transporter, bcrypt) {
             Bucket: process.env.R2_BUCKET_NAME || "nfcchain",
             Key: key,
             Body: buffer,
-            ContentType: "image/jpeg",
+            ContentType: `image/${ext === 'jpg' ? 'jpeg' : ext}`,
             CacheControl: "public, max-age=31536000",
           }));
 
           // 🔒 LOCKED - Use LOCKED R2 public URL
           const publicUrl = process.env.R2_PUBLIC_URL || "https://pub-5d6eb9dacf9146a2bd3bff425e11c1b2.r2.dev";
           const url = `${publicUrl}/${key}`;
-          return res.json({ success: true, url });
+          
+          console.log(`✅ R2 upload successful:`, {
+            key: key,
+            url: url,
+            bucket: process.env.R2_BUCKET_NAME || "nfcchain"
+          });
+          
+          return res.json({ 
+            success: true, 
+            url: url,
+            fileName: key  // Return the R2 key for deletion
+          });
         } catch (r2Error) {
           console.error("R2 upload failed:", r2Error);
           // For production environments (Firebase Functions), don't fall back to local storage
@@ -781,7 +833,11 @@ function setupRoutes(app, db, admin, r2Client, transporter, bcrypt) {
       fs.writeFileSync(localFilePath, buffer);
       
       const localUrl = `http://localhost:3000/uploads/${localFileName}`;
-      return res.json({ success: true, url: localUrl });
+      return res.json({ 
+        success: true, 
+        url: localUrl,
+        fileName: localFileName  // Return local filename for deletion
+      });
       
     } catch (err) {
       console.error(err);
@@ -791,14 +847,195 @@ function setupRoutes(app, db, admin, r2Client, transporter, bcrypt) {
 
   // Delete image
   app.delete(["/api/delete-image", "/delete-image"], async (req, res) => {
-    try {
-      return res.json({
-        success: true,
-        message: "Image deletion handled",
+    const { fileName, memoryId, imageUrl } = req.body;
+    
+    console.log(`🗑️ Delete request received:`, { fileName, memoryId, imageUrl });
+    
+    if (!fileName && !imageUrl) {
+      return res.status(400).json({
+        success: false,
+        message: "fileName or imageUrl is required"
       });
+    }
+    
+    try {
+      let keyToDelete = fileName;
+      
+      // If no fileName provided, try to extract from imageUrl
+      if (!keyToDelete && imageUrl) {
+        console.log(`📝 Extracting key from imageUrl: ${imageUrl}`);
+        
+        // Clean the URL and extract the key
+        let cleanUrl = imageUrl.split('?')[0]; // Remove query parameters
+        
+        // Extract the key from R2 URL or local URL
+        if (cleanUrl.includes('pub-5d6eb9dacf9146a2bd3bff425e11c1b2.r2.dev/')) {
+          keyToDelete = cleanUrl.split('pub-5d6eb9dacf9146a2bd3bff425e11c1b2.r2.dev/')[1];
+          console.log(`📝 Extracted R2 key from URL: ${keyToDelete}`);
+        } else if (cleanUrl.includes('/uploads/')) {
+          // Handle local storage files
+          keyToDelete = cleanUrl.split('/uploads/')[1];
+          console.log(`📝 Extracted local key: ${keyToDelete}`);
+        } else if (cleanUrl.includes('smartlocket-asset.somarious2.workers.dev/')) {
+          // Handle Cloudflare Worker relay URLs
+          keyToDelete = cleanUrl.split('smartlocket-asset.somarious2.workers.dev/')[1];
+          console.log(`📝 Extracted key from worker URL: ${keyToDelete}`);
+        } else {
+          console.log('⚠️ Unable to extract file key from URL, trying fallback methods');
+          // Try to extract from various URL patterns
+          const urlParts = cleanUrl.split('/');
+          const lastPart = urlParts[urlParts.length - 1];
+          if (lastPart && lastPart.includes('.') && memoryId) {
+            keyToDelete = `${memoryId}/${lastPart}`;
+            console.log(`📝 Constructed fallback key: ${keyToDelete}`);
+          }
+        }
+      }
+      
+      console.log(`🎯 Key to delete: "${keyToDelete}"`);
+      
+      // Validate that we have a proper key
+      if (!keyToDelete || keyToDelete.trim() === '') {
+        console.error('❌ No valid key found for deletion');
+        return res.status(400).json({
+          success: false,
+          message: "Unable to determine file key for deletion",
+          debug: { fileName, imageUrl, memoryId }
+        });
+      }
+      
+      let deletedFromR2 = false;
+      let deletionError = null;
+      
+      // Try to delete from Cloudflare R2
+      if (r2Client && DeleteObjectCommand) {
+        try {
+          console.log(`🗑️ Deleting from R2 bucket: ${process.env.R2_BUCKET_NAME || "nfcchain"}`);
+          console.log(`🗑️ R2 key: "${keyToDelete}"`);
+          
+          const deleteCommand = new DeleteObjectCommand({
+            Bucket: process.env.R2_BUCKET_NAME || "nfcchain",
+            Key: keyToDelete,
+          });
+          
+          const deleteResult = await r2Client.send(deleteCommand);
+          deletedFromR2 = true;
+          console.log(`✅ Successfully deleted from R2: ${keyToDelete}`, deleteResult);
+          
+        } catch (r2Error) {
+          deletionError = r2Error;
+          console.error(`❌ R2 deletion failed for "${keyToDelete}":`, {
+            error: r2Error.message,
+            code: r2Error.code || 'UNKNOWN',
+            name: r2Error.name || 'UNKNOWN',
+            key: keyToDelete,
+            bucket: process.env.R2_BUCKET_NAME || "nfcchain"
+          });
+          
+          // If it's a "NoSuchKey" error, the file doesn't exist (might have been deleted already)
+          if (r2Error.name === 'NoSuchKey' || r2Error.code === 'NoSuchKey') {
+            console.log(`📝 File "${keyToDelete}" does not exist in R2 - may have been deleted already`);
+            deletedFromR2 = true; // Consider this a success since the file is gone
+          }
+        }
+      } else {
+        console.warn('⚠️ R2 client not available for deletion');
+        deletionError = 'R2 client not configured';
+      }
+      
+      // Try to delete from local storage as fallback
+      let deletedFromLocal = false;
+      if (keyToDelete && keyToDelete.includes('_')) {
+        try {
+          const fs = require('fs');
+          const path = require('path');
+          
+          // For local files, the key might be like "memoryId_timestamp.ext"
+          const localFileName = keyToDelete.includes('/') ? 
+            keyToDelete.split('/').pop() : keyToDelete;
+          
+          const uploadsDir = path.join(__dirname, '../backend/uploads');
+          const localFilePath = path.join(uploadsDir, localFileName);
+          
+          if (fs.existsSync(localFilePath)) {
+            fs.unlinkSync(localFilePath);
+            deletedFromLocal = true;
+            console.log(`✅ Successfully deleted from local storage: ${localFileName}`);
+          } else {
+            console.log(`📝 Local file does not exist: ${localFileName}`);
+          }
+        } catch (localError) {
+          console.error('❌ Local deletion failed:', localError);
+        }
+      }
+      
+      // Update Firestore to remove the image from the memory document
+      let updatedFirestore = false;
+      if (memoryId) {
+        try {
+          const docRef = db.collection("nfcChains").doc(memoryId);
+          const doc = await docRef.get();
+          
+          if (doc.exists) {
+            const data = doc.data();
+            const images = data.images || [];
+            
+            // Find and remove the image by fileName or URL  
+            const originalCount = images.length;
+            const updatedImages = images.filter(img => {
+              // Check multiple ways the image might be stored
+              const matches = [
+                img.fileName === keyToDelete,
+                img.fileName === fileName, 
+                img.fullImage === imageUrl,
+                img.thumbnail === imageUrl
+              ];
+              return !matches.some(match => match);
+            });
+            
+            if (updatedImages.length < originalCount) {
+              await docRef.update({
+                images: updatedImages,
+                photoCount: updatedImages.length,
+                updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+              });
+              updatedFirestore = true;
+              console.log(`✅ Updated Firestore: removed image from ${memoryId} (${originalCount} -> ${updatedImages.length})`);
+            } else {
+              console.log(`📝 No matching image found in Firestore for deletion`);
+            }
+          } else {
+            console.log(`⚠️ Memory document ${memoryId} not found in Firestore`);
+          }
+        } catch (firestoreError) {
+          console.error('❌ Firestore update failed:', firestoreError);
+        }
+      }
+      
+      // Return success if we deleted from R2 or if the file didn't exist
+      const success = deletedFromR2 || deletedFromLocal || updatedFirestore;
+      
+      return res.json({
+        success: success,
+        message: success ? "Image deletion processed successfully" : "Image deletion failed",
+        details: {
+          deletedFromR2,
+          deletedFromLocal,
+          updatedFirestore,
+          fileName: keyToDelete,
+          originalFileName: fileName,
+          originalImageUrl: imageUrl,
+          error: deletionError?.message
+        }
+      });
+      
     } catch (err) {
-      console.error(err);
-      return res.status(500).json({message: "Delete failed"});
+      console.error('❌ Delete image error:', err);
+      return res.status(500).json({
+        success: false,
+        message: "Delete failed",
+        error: err.message
+      });
     }
   });
 

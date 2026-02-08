@@ -314,7 +314,7 @@ async function loadGalleryData() {
             window.location.href = 'activate.html?id=' + MEMORY_ID;
             return null;
         }
-        // NFCchain is activated - load images into memories array
+        // SmartLocket is activated - load images into memories array
         if (data.images && Array.isArray(data.images) && data.images.length > 0) {
             console.log(`📸 Loading ${data.images.length} images from backend`);
             // Clear existing memories and load from backend
@@ -2361,12 +2361,23 @@ async function uploadImageWithRetry(imageData, memoryId, fileName, maxRetries = 
             clearTimeout(timeoutId);
             
             if (!response.ok) {
-                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                const errorData = await response.json().catch(() => ({}));
+                const errorMessage = errorData.message || response.statusText;
+                throw new Error(`HTTP ${response.status}: ${errorMessage}`);
             }
             
             const result = await response.json();
             
             if (!result.success) {
+                // Check if it's a file type validation error (don't retry these)
+                if (result.message && (
+                    result.message.includes('not supported') || 
+                    result.message.includes('Only image files') ||
+                    result.message.includes('Video and audio files')
+                )) {
+                    // File type error - don't retry, throw immediately
+                    throw new Error(`FILE_TYPE_ERROR: ${result.message}`);
+                }
                 throw new Error(result.message || 'Upload failed');
             }
             
@@ -2375,6 +2386,11 @@ async function uploadImageWithRetry(imageData, memoryId, fileName, maxRetries = 
             
         } catch (error) {
             console.error(`❌ Upload attempt ${attempt} failed:`, error.message);
+            
+            // Don't retry file type validation errors
+            if (error.message.startsWith('FILE_TYPE_ERROR:')) {
+                throw new Error(error.message.replace('FILE_TYPE_ERROR: ', ''));
+            }
             
             if (attempt === maxRetries) {
                 throw new Error(`Upload failed after ${maxRetries} attempts: ${error.message}`);
@@ -2391,23 +2407,95 @@ async function uploadImageWithRetry(imageData, memoryId, fileName, maxRetries = 
 function handleFileUpload(files) {
     if (!files || files.length === 0) return;
     
+    // 🚫 STRICT FILE TYPE VALIDATION - Images Only
+    const validFiles = [];
+    const rejectedFiles = [];
+    const allowedTypes = [
+        'image/jpeg',
+        'image/jpg', 
+        'image/png',
+        'image/gif',
+        'image/webp',
+        'image/bmp',
+        'image/svg+xml'
+    ];
+    
+    // Check each file type strictly
+    Array.from(files).forEach(file => {
+        console.log(`🔍 Checking file: ${file.name}, Type: ${file.type}, Size: ${(file.size / 1024 / 1024).toFixed(2)}MB`);
+        
+        // Reject videos, audio, and non-image files
+        if (file.type.startsWith('video/') || file.type.startsWith('audio/') || 
+            file.type.includes('mp4') || file.type.includes('mov') || 
+            file.type.includes('avi') || file.type.includes('mp3') ||
+            file.type.includes('wav') || file.type.includes('m4a')) {
+            
+            rejectedFiles.push({
+                name: file.name,
+                type: file.type,
+                reason: 'Videos and audio files not supported'
+            });
+            return;
+        }
+        
+        // Check if it's a valid image type
+        if (!allowedTypes.includes(file.type.toLowerCase())) {
+            // Additional check for files without proper MIME type
+            const extension = file.name.toLowerCase().split('.').pop();
+            const imageExtensions = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp', 'svg'];
+            
+            if (!imageExtensions.includes(extension)) {
+                rejectedFiles.push({
+                    name: file.name,
+                    type: file.type || 'unknown',
+                    reason: 'Only image files are supported (JPG, PNG, GIF, WEBP, BMP, SVG)'
+                });
+                return;
+            }
+        }
+        
+        // Check file size (limit to 10MB per image)
+        if (file.size > 10 * 1024 * 1024) {
+            rejectedFiles.push({
+                name: file.name,
+                type: file.type,
+                reason: 'File too large (max 10MB)'
+            });
+            return;
+        }
+        
+        validFiles.push(file);
+    });
+    
+    // Show rejected files notification
+    if (rejectedFiles.length > 0) {
+        const rejectedNames = rejectedFiles.map(f => `${f.name} (${f.reason})`).join('\n• ');
+        showNotification(`❌ Rejected ${rejectedFiles.length} file(s):\n• ${rejectedNames}`, 'error', 6000);
+        console.warn('🚫 Rejected files:', rejectedFiles);
+    }
+    
+    if (validFiles.length === 0) {
+        showNotification('❌ No valid image files to upload!', 'error');
+        return;
+    }
+    
     const remainingSlots = MAX_IMAGES - memories.length;
-    const filesToProcess = Math.min(files.length, remainingSlots);
+    const filesToProcess = Math.min(validFiles.length, remainingSlots);
     
     if (filesToProcess === 0) {
         showNotification('❌ Maximum images reached!', 'error');
         return;
     }
     
-    console.log(`📸 Processing ${filesToProcess} files...`);
+    console.log(`📸 Processing ${filesToProcess} valid image files...`);
     showNotification(`📤 Uploading ${filesToProcess} image${filesToProcess > 1 ? 's' : ''}...`, 'info');
     
     let processedCount = 0;
     
-    // Process each file - upload to Cloudflare R2
+    // Process each valid file - upload to Cloudflare R2
     for (let i = 0; i < filesToProcess; i++) {
-        const file = files[i];
-        if (file && file.type.startsWith('image/')) {
+        const file = validFiles[i];
+        if (file) {
             const reader = new FileReader();
             
             reader.onload = async function(e) {
@@ -2629,30 +2717,51 @@ async function deleteImage(index) {
     if (confirm('Are you sure you want to remove this image?')) {
         const memory = memories[index];
         
-        // Delete from Cloudflare R2 if it has a fileName
-        if (memory.fileName) {
-            try {
-                console.log(`🗑️ Deleting from Cloudflare R2: ${memory.fileName}`);
+        // Delete from Cloudflare R2 and update backend
+        try {
+            const deletionPayload = {
+                fileName: memory.fileName,
+                memoryId: MEMORY_ID,
+                imageUrl: memory.fullImage
+            };
+            
+            console.log(`🗑️ Deleting from storage with payload:`, {
+                fileName: deletionPayload.fileName,
+                memoryId: deletionPayload.memoryId,
+                imageUrl: deletionPayload.imageUrl,
+                memoryObject: memory
+            });
+            
+            const response = await fetch(`${API_BASE_URL}/api/delete-image`, {
+                method: 'DELETE',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(deletionPayload)
+            });
+            
+            if (response.ok) {
+                const result = await response.json();
+                console.log(`✅ Image deletion response:`, result);
                 
-                const response = await fetch(`${API_BASE_URL}/api/delete-image`, {
-                    method: 'DELETE',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        fileName: memory.fileName
-                    })
-                });
-                
-                if (response.ok) {
-                    console.log(`✅ Image deleted from R2 Storage`);
+                if (result.details?.deletedFromR2) {
+                    console.log(`🔥 Confirmed: Image deleted from Cloudflare R2`);
+                    showNotification(`✅ Image deleted from cloud storage`, 'success');
+                } else if (result.success) {
+                    console.warn(`⚠️ Warning: Image may not have been deleted from R2:`, result.details);
+                    showNotification(`⚠️ Image removed from gallery\n(Cloud deletion status uncertain)`, 'warning');
                 } else {
-                    console.warn(`⚠️ Failed to delete from R2 Storage (image may not exist)`);
+                    console.error(`❌ Storage deletion failed:`, result);
+                    showNotification(`⚠️ Image removed from gallery\n(Cloud deletion failed)`, 'warning');
                 }
-            } catch (error) {
-                console.error('❌ Error deleting from R2 Storage:', error);
-                // Continue with deletion even if R2 delete fails
+            } else {
+                const errorResponse = await response.json().catch(() => ({ message: 'Unknown error' }));
+                console.warn(`⚠️ Failed to delete from storage (response: ${response.status}):`, errorResponse);
+                showNotification(`⚠️ Image removed from gallery\n(Cloud deletion failed: ${response.status})`, 'warning');
             }
+        } catch (error) {
+            console.error('❌ Error deleting from storage:', error);
+            // Continue with local deletion even if backend delete fails
         }
         
         // Remove from memories array
@@ -2672,6 +2781,29 @@ async function deleteImage(index) {
         // Update UI once
         updateEditControls();
         populateImageGrid();
+        
+        // Save updated gallery data to backend
+        try {
+            const galleryData = {
+                images: memories.map(memory => ({
+                    id: memory.id,
+                    title: memory.title,
+                    description: memory.description,
+                    fullImage: memory.fullImage,
+                    thumbnail: memory.thumbnail,
+                    fileName: memory.fileName,
+                    date: memory.date,
+                    location: memory.location,
+                    tags: memory.tags,
+                    isFavorite: memory.isFavorite
+                }))
+            };
+            await saveGalleryData(galleryData);
+            console.log('✅ Gallery data updated in backend after deletion');
+        } catch (saveError) {
+            console.error('❌ Failed to update gallery data in backend:', saveError);
+            // Don't show error to user as the local deletion was successful
+        }
         
         showNotification('🗑️ Image removed successfully!', 'success');
     }
@@ -2793,7 +2925,7 @@ function handleBackgroundClick(event) {
 }
 
 // Notification System
-function showNotification(message, type = 'info') {
+function showNotification(message, type = 'info', duration = 3000) {
     // Remove any existing notifications
     const existingNotification = document.querySelector('.notification');
     if (existingNotification) {
@@ -2803,7 +2935,20 @@ function showNotification(message, type = 'info') {
     // Create notification element
     const notification = document.createElement('div');
     notification.className = `notification notification-${type}`;
-    notification.textContent = message;
+    
+    // Handle multi-line messages
+    if (message.includes('\n')) {
+        // Convert newlines to proper line breaks for better formatting
+        const lines = message.split('\n');
+        lines.forEach((line, index) => {
+            const lineDiv = document.createElement('div');
+            lineDiv.textContent = line;
+            if (index > 0) lineDiv.style.marginTop = '4px';
+            notification.appendChild(lineDiv);
+        });
+    } else {
+        notification.textContent = message;
+    }
     
     // Add styles
     notification.style.cssText = `
@@ -2816,17 +2961,21 @@ function showNotification(message, type = 'info') {
         border-radius: 8px;
         box-shadow: 0 4px 12px rgba(0,0,0,0.2);
         z-index: 9999999;
-        font-size: 14px;
+        font-size: 13px;
         font-weight: 500;
-        max-width: 300px;
+        max-width: 350px;
+        max-height: 200px;
+        overflow-y: auto;
         word-wrap: break-word;
+        white-space: pre-wrap;
+        line-height: 1.4;
         animation: slideInRight 0.3s ease-out;
     `;
     
     // Add to page
     document.body.appendChild(notification);
     
-    // Auto remove after 3 seconds
+    // Auto remove after specified duration
     setTimeout(() => {
         if (notification.parentNode) {
             notification.style.animation = 'slideOutRight 0.3s ease-in forwards';
@@ -2836,7 +2985,7 @@ function showNotification(message, type = 'info') {
                 }
             }, 300);
         }
-    }, 3000);
+    }, duration);
 }
 
 function getNotificationColor(type) {

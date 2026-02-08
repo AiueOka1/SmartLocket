@@ -1001,6 +1001,94 @@ body.gallery-active main {
     text-shadow: 0 1px 3px var(--shadow-light);
 }
 
+/* Enhanced Mobile Color Scheme Responsiveness */
+@media (max-width: 768px) {
+    /* Color scheme title styling on mobile */
+    .theme-section h4 {
+        font-size: 0.95rem;
+        margin-bottom: 0.75rem;
+        text-align: center;
+        color: var(--text-color);
+        font-weight: 600;
+    }
+    
+    /* Color palette panel header on mobile */
+    .color-palette-panel h3 {
+        font-size: 1.1rem;
+        text-align: center;
+        margin-bottom: 1.25rem;
+    }
+    
+    /* Theme modes buttons on mobile */
+    .theme-modes {
+        display: flex;
+        gap: 0.5rem;
+        justify-content: center;
+        margin-bottom: 1.25rem;
+    }
+    
+    .theme-btn {
+        padding: 0.5rem 1rem;
+        font-size: 0.85rem;
+        border-radius: 10px;
+    }
+    
+    /* Enhance color preset visual feedback on mobile */
+    .color-preset {
+        border-radius: 12px;
+        transition: all 0.2s ease;
+        box-shadow: 
+            0 3px 12px rgba(0, 0, 0, 0.1),
+            0 1px 6px rgba(0, 0, 0, 0.05);
+    }
+    
+    .color-preset:active {
+        transform: scale(0.95);
+    }
+    
+    .color-preset.selected {
+        transform: scale(1.08);
+        box-shadow:
+            0 6px 20px rgba(0, 0, 0, 0.15),
+            0 0 0 2px var(--text-color),
+            0 0 0 4px rgba(var(--primary-color-rgb, 37, 99, 235), 0.1);
+    }
+}
+
+/* Extra small mobile devices */
+@media (max-width: 380px) {
+    .color-options {
+        gap: 0.4rem;
+        padding: 0.4rem;
+        grid-template-columns: repeat(4, 1fr);
+    }
+    
+    .color-preset {
+        width: 40px;
+        height: 40px;
+        border-radius: 10px;
+    }    
+    .color-palette-panel {
+        padding: 1rem;
+        border-radius: 16px;
+    }
+}
+
+/* Touch-friendly hover states for mobile */
+@media (hover: none) and (pointer: coarse) {
+    .color-preset:hover {
+        transform: none;
+        border-color: transparent;
+        box-shadow:
+            0 6px 20px rgba(0, 0, 0, 0.08),
+            0 2px 8px rgba(0, 0, 0, 0.04);
+    }
+    
+    .color-preset:hover::before {
+        opacity: 0;
+    }
+}
+
 .background-options {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
@@ -1713,10 +1801,6 @@ footer p {
 
     .color-palette-panel.active {
         transform: translateX(50%) translateY(0) scale(1);
-    }
-
-    .color-options {
-        grid-template-columns: repeat(2, 1fr);
     }
 
     .color-preset {
