@@ -329,6 +329,62 @@ function setupRoutes(app, db, admin, r2Client, transporter, bcrypt) {
     }
   });
 
+  // Get next unused SmartLocket for NFC writing
+  app.get(["/api/admin/next-unused", "/admin/next-unused"], async (req, res) => {
+    try {
+      // First, try to get unused SmartLockets without ordering (no index required)
+      const snapshot = await db.collection("nfcChains")
+        .where("status", "==", "unused")
+        .limit(10)
+        .get();
+
+      if (snapshot.empty) {
+        return res.status(404).json({
+          success: false,
+          message: "No unused SmartLockets available"
+        });
+      }
+
+      // Sort by createdAt manually (since we only have 10 docs, this is efficient)
+      const unusedDocs = [];
+      snapshot.forEach((doc) => {
+        const data = doc.data();
+        unusedDocs.push({
+          id: doc.id,
+          data: data,
+          createdAt: data.createdAt
+        });
+      });
+
+      // Sort by creation time (oldest first)
+      unusedDocs.sort((a, b) => {
+        const timeA = a.createdAt?.toDate?.() || a.createdAt || new Date(0);
+        const timeB = b.createdAt?.toDate?.() || b.createdAt || new Date(0);
+        return timeA - timeB;
+      });
+
+      const firstDoc = unusedDocs[0];
+      const data = firstDoc.data;
+
+      return res.json({
+        success: true,
+        data: {
+          memoryId: data.memoryId || firstDoc.id,
+          viewUrl: data.viewUrl || `https://memorychain.app/${data.memoryId || firstDoc.id}`,
+          photoLimit: data.photoLimit || 5,
+          premium: data.premium || false,
+          createdAt: data.createdAt ? formatTimestamp(data.createdAt) : null
+        }
+      });
+    } catch (error) {
+      console.error("Next unused error:", error);
+      return res.status(500).json({
+        success: false,
+        message: "Failed to get next unused SmartLocket"
+      });
+    }
+  });
+
   // Mark as written
   app.post(["/api/admin/mark-written/:memoryId"], async (req, res) => {
     const {memoryId} = req.params;

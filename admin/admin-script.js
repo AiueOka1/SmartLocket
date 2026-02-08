@@ -395,7 +395,7 @@ let currentSmartLocket = null;
 
 async function loadNextUnused() {
     try {
-        const response = await fetch(`${API_BASE_URL}/admin/next-unused`);
+        const response = await fetch(`${API_BASE_URL}/api/admin/next-unused`);
         
         if (response.status === 404) {
             alert('No unused SmartLockets available. Please generate a new batch first.');
@@ -403,6 +403,12 @@ async function loadNextUnused() {
         }
         
         const result = await response.json();
+        
+        if (!result.success) {
+            alert(`Failed: ${result.message}`);
+            return;
+        }
+        
         currentSmartLocket = result.data;
         
         // Update display
@@ -429,7 +435,7 @@ async function markAsWritten() {
     }
     
     try {
-        const response = await fetch(`${API_BASE_URL}/admin/mark-written/${currentSmartLocket.memoryId}`, {
+        const response = await fetch(`${API_BASE_URL}/api/admin/mark-written/${currentSmartLocket.memoryId}`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
@@ -458,7 +464,7 @@ async function markAsWritten() {
 
 async function loadNFCStats() {
     try {
-        const response = await fetch(`${API_BASE_URL}/admin/stats`);
+        const response = await fetch(`${API_BASE_URL}/api/admin/stats`);
         const stats = await response.json();
         
         // For now, show total written (would need daily tracking in production)
@@ -466,19 +472,43 @@ async function loadNFCStats() {
         document.getElementById('remainingUnused').textContent = stats.unused || 0;
     } catch (error) {
         console.error('Failed to load NFC stats:', error);
+        // Set default values if API fails
+        document.getElementById('writtenToday').textContent = '0';
+        document.getElementById('remainingUnused').textContent = '0';
     }
 }
 
 function copyCurrentSmartLocketUrl() {
-    if (!currentSmartLocket) {
-        alert('No URL to copy');
+    if (!currentSmartLocket || !currentSmartLocket.viewUrl) {
+        alert('No URL to copy - please load a SmartLocket first');
         return;
     }
     
     navigator.clipboard.writeText(currentSmartLocket.viewUrl).then(() => {
-        alert('URL copied to clipboard');
+        alert('URL copied to clipboard!');
+        
+        // Visual feedback on button
+        const button = event.target.closest('button');
+        const originalText = button.innerHTML;
+        button.innerHTML = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+            <path d="M20 6L9 17l-5-5" stroke="currentColor" stroke-width="2"/>
+        </svg> Copied!`;
+        button.style.backgroundColor = '#22c55e';
+        
+        setTimeout(() => {
+            button.innerHTML = originalText;
+            button.style.backgroundColor = '';
+        }, 2000);
+        
     }).catch(err => {
-        alert('Failed to copy URL');
+        // Fallback for older browsers
+        const textArea = document.createElement('textarea');
+        textArea.value = currentSmartLocket.viewUrl;
+        document.body.appendChild(textArea);
+        textArea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textArea);
+        alert('URL copied to clipboard!');
         console.error('Copy error:', err);
     });
 }
