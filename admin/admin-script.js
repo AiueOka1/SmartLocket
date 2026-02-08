@@ -6,6 +6,94 @@ const API_BASE_URL = window.location.hostname === 'localhost' || window.location
     ? 'http://localhost:3000'
     : 'https://api-vcdrn5osga-uc.a.run.app';
 
+// Login credentials (in production, this should be handled by backend)
+const ADMIN_CREDENTIALS = {
+    username: 'admin',
+    password: 'mariousso1'
+};
+
+// ==========================================
+// AUTHENTICATION
+// ==========================================
+
+function checkAuth() {
+    const isLoggedIn = sessionStorage.getItem('adminLoggedIn') === 'true';
+    const loginSection = document.getElementById('loginSection');
+    const adminPanel = document.getElementById('adminPanel');
+    
+    if (isLoggedIn) {
+        loginSection.style.display = 'none';
+        adminPanel.style.display = 'block';
+        loadDashboardStats(); // Load initial data
+    } else {
+        loginSection.style.display = 'flex';
+        adminPanel.style.display = 'none';
+    }
+}
+
+function login(username, password) {
+    if (username === ADMIN_CREDENTIALS.username && password === ADMIN_CREDENTIALS.password) {
+        sessionStorage.setItem('adminLoggedIn', 'true');
+        checkAuth();
+        return true;
+    }
+    return false;
+}
+
+function logout() {
+    if (confirm('Are you sure you want to logout?')) {
+        sessionStorage.removeItem('adminLoggedIn');
+        checkAuth();
+    }
+}
+
+// Login form handler
+document.addEventListener('DOMContentLoaded', function() {
+    const loginForm = document.getElementById('loginForm');
+    if (loginForm) {
+        loginForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            const errorDiv = document.getElementById('loginError');
+            
+            if (login(username, password)) {
+                errorDiv.style.display = 'none';
+            } else {
+                errorDiv.textContent = 'Invalid username or password';
+                errorDiv.style.display = 'block';
+                // Clear password field
+                document.getElementById('password').value = '';
+            }
+        });
+    }
+    
+    // Check auth on page load
+    checkAuth();
+});
+
+// ==========================================
+// UTILITY FUNCTIONS
+// ==========================================
+
+function copyToClipboard(text, button) {
+    navigator.clipboard.writeText(text).then(() => {
+        // Show success feedback
+        const originalText = button.innerHTML;
+        button.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none"><path d="M9 12l2 2 4-4" stroke="currentColor" stroke-width="2"/></svg> Copied';
+        button.style.background = '#10b981';
+        
+        setTimeout(() => {
+            button.innerHTML = originalText;
+            button.style.background = '#3b82f6';
+        }, 2000);
+    }).catch(err => {
+        console.error('Failed to copy text: ', err);
+        alert('Failed to copy to clipboard');
+    });
+}
+
 // ==========================================
 // NAVIGATION
 // ==========================================
@@ -116,7 +204,7 @@ document.getElementById('generateForm').addEventListener('submit', async functio
     submitBtn.innerHTML = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" opacity="0.25"/><path d="M4 12a8 8 0 018-8" stroke="currentColor" stroke-width="4"/></svg> Generating...';
     
     try {
-        const response = await fetch(`${API_BASE_URL}/admin/generate-batch`, {
+        const response = await fetch(`${API_BASE_URL}/api/admin/generate-batch`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
@@ -128,6 +216,14 @@ document.getElementById('generateForm').addEventListener('submit', async functio
                 premium
             })
         });
+        
+        // Check if response is ok first
+        if (!response.ok) {
+            const errorText = await response.text();
+            console.error('HTTP Error:', response.status, response.statusText);
+            console.error('Error response:', errorText);
+            throw new Error(`HTTP ${response.status}: ${response.statusText}. Check if the API endpoint exists.`);
+        }
         
         const result = await response.json();
         
@@ -153,7 +249,17 @@ document.getElementById('generateForm').addEventListener('submit', async functio
         }
     } catch (error) {
         console.error('Batch generation error:', error);
-        alert('Failed to generate batch. Make sure the backend is running on localhost:3000');
+        
+        // Better error messages for different scenarios
+        if (error.message.includes('404')) {
+            alert('API endpoint not found. The generate-batch route may not be deployed on the live server.');
+        } else if (error.message.includes('CORS')) {
+            alert('CORS error. The live server may not allow requests from this domain.');
+        } else if (error.message.includes('Failed to fetch')) {
+            alert('Network error. Check if the API server is running and accessible.');
+        } else {
+            alert(`Failed to generate batch: ${error.message}`);
+        }
     } finally {
         submitBtn.disabled = false;
         submitBtn.innerHTML = originalText;
@@ -218,6 +324,8 @@ async function loadInventory() {
         if (inventory.length > 0) {
             inventory.forEach(item => {
                 const row = document.createElement('tr');
+                // Use the viewUrl from Firebase data instead of constructing it
+                const viewUrl = item.viewUrl || `https://smartlocket.win/public/gallery.html?id=${item.memoryId}`;
                 row.innerHTML = `
                     <td><strong>${item.memoryId}</strong></td>
                     <td><span class="status-badge ${item.status}">${item.status}</span></td>
@@ -228,20 +336,29 @@ async function loadInventory() {
                     <td>${item.createdAt ? new Date(item.createdAt).toLocaleDateString() : '-'}</td>
                     <td>${item.activatedAt ? new Date(item.activatedAt).toLocaleDateString() : '-'}</td>
                     <td>
+                        <button class="btn-copy" onclick="copyToClipboard('${viewUrl}', this)">
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none">
+                                <rect x="9" y="9" width="13" height="13" rx="2" stroke="currentColor" stroke-width="2"/>
+                                <path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1" stroke="currentColor" stroke-width="2"/>
+                            </svg>
+                            Copy
+                        </button>
+                    </td>
+                    <td>
                         <button class="btn-action" onclick="viewDetails('${item.memoryId}')">View</button>
                     </td>
                 `;
                 tbody.appendChild(row);
             });
         } else {
-            tbody.innerHTML = '<tr><td colspan="9" style="text-align: center; padding: 40px;">No SmartLockets found</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="10" style="text-align: center; padding: 40px;">No SmartLockets found</td></tr>';
         }
         
         console.log('Inventory loaded:', inventory.length, 'items');
     } catch (error) {
         console.error('Failed to load inventory:', error);
         const tbody = document.getElementById('inventoryTableBody');
-        tbody.innerHTML = '<tr><td colspan="9" style="text-align: center; padding: 40px; color: red;">Failed to load inventory. Make sure the backend is running.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="10" style="text-align: center; padding: 40px; color: red;">Failed to load inventory. Make sure the backend is running.</td></tr>';
     }
 }
 
@@ -322,7 +439,7 @@ async function markAsWritten() {
         const result = await response.json();
         
         if (response.ok && result.success) {
-            alert(`\u2713 ${currentSmartLocket.memoryId} marked as written!`);
+            alert(`${currentSmartLocket.memoryId} marked as written`);
             
             // Load next unused automatically
             await loadNextUnused();
@@ -352,14 +469,14 @@ async function loadNFCStats() {
     }
 }
 
-function copyToClipboard() {
+function copyCurrentSmartLocketUrl() {
     if (!currentSmartLocket) {
         alert('No URL to copy');
         return;
     }
     
     navigator.clipboard.writeText(currentSmartLocket.viewUrl).then(() => {
-        alert('✓ URL copied to clipboard!');
+        alert('URL copied to clipboard');
     }).catch(err => {
         alert('Failed to copy URL');
         console.error('Copy error:', err);
@@ -395,7 +512,7 @@ document.getElementById('orderAssignmentForm')?.addEventListener('submit', async
         const result = await response.json();
         
         if (response.ok && result.success) {
-            alert(`✓ Order assigned successfully!\n\nMemory ID: ${memoryId}\nOrder ID: ${orderId}`);
+            alert(`Order assigned successfully\n\nMemory ID: ${memoryId}\nOrder ID: ${orderId}`);
             this.reset();
             loadDashboardStats();
         } else {
@@ -416,22 +533,65 @@ function selectFromInventory() {
 }
 
 // ==========================================
-// LOGOUT
-// ==========================================
-
-function logout() {
-    if (confirm('Are you sure you want to logout?')) {
-        window.location.href = 'index.html';
-    }
-}
-
-// ==========================================
 // INITIALIZATION
 // ==========================================
 
-// Load dashboard on page load
+// Initialize admin panel on page load
 window.addEventListener('DOMContentLoaded', () => {
     console.log('SmartLocket Admin Panel loaded');
     console.log('API Base URL:', API_BASE_URL);
-    loadDashboardStats();
+    addTestButton(); // Add API test button for live environment
 });
+
+// ==========================================
+// API TESTING FUNCTIONS
+// ==========================================
+
+async function testAPIConnection() {
+    console.log('Testing API connection...');
+    console.log('API Base URL:', API_BASE_URL);
+    
+    try {
+        // Test health endpoint
+        const healthResponse = await fetch(`${API_BASE_URL}/health`);
+        console.log('Health check status:', healthResponse.status);
+        
+        if (healthResponse.ok) {
+            const healthData = await healthResponse.json();
+            console.log('Health check response:', healthData);
+        } else {
+            console.error('Health check failed:', healthResponse.statusText);
+        }
+        
+        // Test admin stats endpoint
+        const statsResponse = await fetch(`${API_BASE_URL}/api/admin/stats`);
+        console.log('Stats endpoint status:', statsResponse.status);
+        
+        if (statsResponse.ok) {
+            const statsData = await statsResponse.json();
+            console.log('Stats endpoint response:', statsData);
+        } else {
+            console.error('Stats endpoint failed:', statsResponse.statusText);
+            const errorText = await statsResponse.text();
+            console.error('Error response:', errorText);
+        }
+        
+    } catch (error) {
+        console.error('API connection test failed:', error);
+    }
+}
+
+// Add test button functionality
+function addTestButton() {
+    if (window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
+        const testBtn = document.createElement('button');
+        testBtn.textContent = 'Test API Connection';
+        testBtn.className = 'btn-secondary';
+        testBtn.onclick = testAPIConnection;
+        testBtn.style.position = 'fixed';
+        testBtn.style.bottom = '20px';
+        testBtn.style.right = '20px';
+        testBtn.style.zIndex = '1000';
+        document.body.appendChild(testBtn);
+    }
+}

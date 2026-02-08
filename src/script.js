@@ -65,14 +65,14 @@ function createOptimizedImage(src, alt = '', className = '') {
         
         const parent = this.parentElement;
         if (parent) {
-            parent.style.background = 'linear-gradient(45deg, #6366f1, #8b5cf6)';
+            parent.style.background = 'linear-gradient(45deg, #ffffffff, #ffffffff)';
             parent.style.display = 'flex';
             parent.style.alignItems = 'center';
             parent.style.justifyContent = 'center';
-            parent.style.color = 'white';
+            parent.style.color = 'black';
             parent.style.fontSize = '18px';
             parent.style.fontWeight = 'bold';
-            parent.innerHTML = '<div style="text-align: center; padding: 20px;"><div>📱</div><div>Image Loading...</div><div style="font-size: 14px; opacity: 0.8;">Check your connection</div></div>';
+            parent.innerHTML = '<div style="text-align: center; padding: 20px;"><div></div><div>Upload an image</div><div style="font-size: 14px; opacity: 0.8;"></div></div>';
         }
     });
     
@@ -904,14 +904,14 @@ function initializeSwiper() {
                         this.style.display = 'none';
                         const parent = this.parentElement;
                         if (parent) {
-                            parent.style.background = 'linear-gradient(45deg, #6366f1, #8b5cf6)';
+                            parent.style.background = 'linear-gradient(45deg, #ffffffffrgba(255, 255, 255, 1)f6)';
                             parent.style.display = 'flex';
                             parent.style.alignItems = 'center';
                             parent.style.justifyContent = 'center';
-                            parent.style.color = 'white';
+                            parent.style.color = 'black';
                             parent.style.fontSize = '18px';
                             parent.style.fontWeight = 'bold';
-                            parent.innerHTML = '&lt;div style=&quot;text-align: center; padding: 20px;&quot;&gt;&lt;div&gt;📱&lt;/div&gt;&lt;div&gt;Image Loading...&lt;/div&gt;&lt;div style=&quot;font-size: 14px; opacity: 0.8;&quot;&gt;Check your connection&lt;/div&gt;&lt;/div&gt;';
+                            parent.innerHTML = '&lt;div style=&quot;text-align: center; padding: 20px;&quot;&gt;&lt;div&gt;&lt;/div&gt;&lt;div&gt;Upload an image&lt;/div&gt;&lt;div style=&quot;font-size: 14px; opacity: 0.8;&quot;&gt;&lt;/div&gt;&lt;/div&gt;';
                         }
                      ">
                 <div class="slide-info">

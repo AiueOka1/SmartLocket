@@ -207,6 +207,7 @@ function setupRoutes(app, db, admin, r2Client, transporter, bcrypt) {
           photoLimit: data.photoLimit || 0,
           orderId: data.orderId || null,
           email: data.email || null,
+          viewUrl: data.viewUrl || `https://smartlocket.win/public/gallery.html?id=${data.memoryId || doc.id}`,
           createdAt: data.createdAt ? formatTimestamp(data.createdAt) : null,
           activatedAt: data.activatedAt ? formatTimestamp(data.activatedAt) : null,
         });
@@ -271,7 +272,7 @@ function setupRoutes(app, db, admin, r2Client, transporter, bcrypt) {
           activatedAt: null,
           orderId: null,
           customerName: null,
-          viewUrl: `https://smartlocket.win/m/\${memoryId}`,
+          viewUrl: `https://smartlocket.win/public/gallery.html?id=${memoryId}`,
 
           // Gallery defaults
           galleryTitle: "SmartLocket Gallery",
@@ -415,28 +416,28 @@ function setupRoutes(app, db, admin, r2Client, transporter, bcrypt) {
           to: email,
           subject: "Activate Your SmartLocket",
           html: `
-            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-              <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px; text-align: center; color: white;">
-                <h1>🔓 Activate Your SmartLocket</h1>
+            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; color: #000000;">
+              <div style="background: #000000; padding: 30px; text-align: center; color: #ffffff;">
+                <h1>Activate Your SmartLocket</h1>
               </div>
-              <div style="padding: 30px;">
-                <h2>Almost Ready!</h2>
-                <p>Your SmartLocket <strong>${memoryId}</strong> is ready to be activated.</p>
+              <div style="padding: 30px; background: #ffffff; border: 1px solid #000000;">
+                <h2 style="color: #000000;">Almost Ready</h2>
+                <p style="color: #000000;">Your SmartLocket <strong>${memoryId}</strong> is ready to be activated.</p>
                 
-                <p>Your verification code is:</p>
+                <p style="color: #000000;">Your verification code is:</p>
                 <div style="text-align: center; margin: 20px 0;">
-                  <span style="background: #667eea; color: white; padding: 15px 30px; font-size: 24px; font-weight: bold; border-radius: 10px; display: inline-block; letter-spacing: 5px;">
+                  <span style="background: #000000; color: #ffffff; padding: 15px 30px; font-size: 24px; font-weight: bold; border: 1px solid #000000; display: inline-block; letter-spacing: 5px;">
                     ${verificationCode}
                   </span>
                 </div>
                 
-                <p>Enter this code along with your desired 6-digit passcode to complete activation.</p>
-                <p style="color: #666; font-size: 14px;">This code will expire in 10 minutes.</p>
+                <p style="color: #000000;">Enter this code along with your desired 6-digit passcode to complete activation.</p>
+                <p style="color: #666666; font-size: 14px;">This code will expire in 10 minutes.</p>
               </div>
             </div>
           `,
         });
-        console.log(`📧 Email sent to ${email}`);
+        console.log(`Email sent to ${email}`);
       } catch (emailError) {
         console.log(`⚠️ Email service not configured, verification code: ${verificationCode}`);
         // Don't fail in development if email service isn't configured
@@ -444,7 +445,7 @@ function setupRoutes(app, db, admin, r2Client, transporter, bcrypt) {
 
       // In development, always log the verification code to console
       if (process.env.NODE_ENV !== 'production') {
-        console.log(`🔑 DEV MODE: Verification code for ${memoryId} (${email}): ${verificationCode}`);
+        console.log(`DEV MODE: Verification code for ${memoryId} (${email}): ${verificationCode}`);
       }
 
       return res.json({
@@ -505,28 +506,28 @@ function setupRoutes(app, db, admin, r2Client, transporter, bcrypt) {
           to: email,
           subject: "SmartLocket - New Verification Code",
           html: `
-            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-              <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px; text-align: center; color: white;">
-                <h1>🔓 New Verification Code</h1>
+            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; color: #000000;">
+              <div style="background: #000000; padding: 30px; text-align: center; color: #ffffff;">
+                <h1>New Verification Code</h1>
               </div>
-              <div style="padding: 30px;">
-                <h2>New Code Requested</h2>
-                <p>A new verification code has been requested for SmartLocket <strong>${memoryId}</strong>.</p>
+              <div style="padding: 30px; background: #ffffff; border: 1px solid #000000;">
+                <h2 style="color: #000000;">New Code Requested</h2>
+                <p style="color: #000000;">A new verification code has been requested for SmartLocket <strong>${memoryId}</strong>.</p>
                 
-                <p>Your new verification code is:</p>
+                <p style="color: #000000;">Your new verification code is:</p>
                 <div style="text-align: center; margin: 20px 0;">
-                  <span style="background: #667eea; color: white; padding: 15px 30px; font-size: 24px; font-weight: bold; border-radius: 10px; display: inline-block; letter-spacing: 5px;">
+                  <span style="background: #000000; color: #ffffff; padding: 15px 30px; font-size: 24px; font-weight: bold; border: 1px solid #000000; display: inline-block; letter-spacing: 5px;">
                     ${verificationCode}
                   </span>
                 </div>
                 
-                <p>Enter this code along with your desired 6-digit passcode to complete activation.</p>
-                <p style="color: #666; font-size: 14px;">This code will expire in 10 minutes.</p>
+                <p style="color: #000000;">Enter this code along with your desired 6-digit passcode to complete activation.</p>
+                <p style="color: #666666; font-size: 14px;">This code will expire in 10 minutes.</p>
               </div>
             </div>
           `,
         });
-        console.log(`📧 New code sent to ${email}`);
+        console.log(`New code sent to ${email}`);
       } catch (emailError) {
         console.log(`⚠️ Email service not configured, verification code: ${verificationCode}`);
         // Don't fail in development if email service isn't configured
@@ -534,7 +535,7 @@ function setupRoutes(app, db, admin, r2Client, transporter, bcrypt) {
 
       // In development, always log the verification code to console
       if (process.env.NODE_ENV !== 'production') {
-        console.log(`🔑 DEV MODE: New verification code for ${memoryId} (${email}): ${verificationCode}`);
+        console.log(`DEV MODE: New verification code for ${memoryId} (${email}): ${verificationCode}`);
       }
 
       return res.json({
@@ -599,20 +600,20 @@ function setupRoutes(app, db, admin, r2Client, transporter, bcrypt) {
       await transporter.sendMail({
         from: `SmartLocket <${process.env.EMAIL_USER}>`,
         to: email,
-        subject: "Welcome to SmartLocket!",
+        subject: "Welcome to SmartLocket",
         html: `
-          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-            <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px; text-align: center; color: white;">
-              <h1>🎉 Welcome to SmartLocket!</h1>
+          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; color: #000000;">
+            <div style="background: #000000; padding: 30px; text-align: center; color: #ffffff;">
+              <h1>Welcome to SmartLocket</h1>
             </div>
-            <div style="padding: 30px;">
-              <h2>Your SmartLocket is Ready!</h2>
-              <p>Your personal memory gallery has been successfully activated.</p>
-              <div style="background: #f3f4f6; padding: 20px; border-radius: 10px; margin: 20px 0;">
-                <p style="margin: 0;"><strong>SmartLocket ID:</strong> ${memoryId}</p>
-                <p style="margin: 10px 0 0 0;"><strong>Access URL:</strong> <a href="https://smartlocket.win/m/${memoryId}">smartlocket.win/m/${memoryId}</a></p>
+            <div style="padding: 30px; background: #ffffff; border: 1px solid #000000;">
+              <h2 style="color: #000000;">Your SmartLocket is Ready</h2>
+              <p style="color: #000000;">Your personal memory gallery has been successfully activated.</p>
+              <div style="background: #ffffff; border: 1px solid #000000; padding: 20px; margin: 20px 0;">
+                <p style="margin: 0; color: #000000;"><strong>SmartLocket ID:</strong> ${memoryId}</p>
+                <p style="margin: 10px 0 0 0; color: #000000;"><strong>Access URL:</strong> <a href="https://smartlocket.win/public/gallery.html?id=${memoryId}" style="color: #000000;">smartlocket.win/public/gallery.html?id=${memoryId}</a></p>
               </div>
-              <p><strong>Important:</strong> Save your passcode securely. You'll need it to edit your gallery.</p>
+              <p style="color: #000000;"><strong>Important:</strong> Save your passcode securely. You will need it to edit your gallery.</p>
             </div>
           </div>
         `,
@@ -1074,24 +1075,24 @@ function setupRoutes(app, db, admin, r2Client, transporter, bcrypt) {
         to: email,
         subject: "Reset Your SmartLocket Passcode",
         html: `
-          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-            <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px; text-align: center; color: white;">
+          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; color: #000000;">
+            <div style="background: #000000; padding: 30px; text-align: center; color: #ffffff;">
               <h1>Reset Your Passcode</h1>
             </div>
-            <div style="padding: 30px;">
-              <h2>Password Reset Request</h2>
-              <p>We received a request to reset the passcode for your SmartLocket:</p>
-              <div style="background: #f3f4f6; padding: 20px; border-radius: 10px; margin: 20px 0;">
-                <p style="margin: 0;"><strong>SmartLocket ID:</strong> ${memoryId}</p>
+            <div style="padding: 30px; background: #ffffff; border: 1px solid #000000;">
+              <h2 style="color: #000000;">Password Reset Request</h2>
+              <p style="color: #000000;">We received a request to reset the passcode for your SmartLocket:</p>
+              <div style="background: #ffffff; border: 1px solid #000000; padding: 20px; margin: 20px 0;">
+                <p style="margin: 0; color: #000000;"><strong>SmartLocket ID:</strong> ${memoryId}</p>
               </div>
-              <p>Your verification code is:</p>
+              <p style="color: #000000;">Your verification code is:</p>
               <div style="text-align: center; margin: 20px 0;">
-                <span style="background: #667eea; color: white; padding: 15px 30px; font-size: 24px; font-weight: bold; border-radius: 10px; display: inline-block; letter-spacing: 5px;">
+                <span style="background: #000000; color: #ffffff; padding: 15px 30px; font-size: 24px; font-weight: bold; border: 1px solid #000000; display: inline-block; letter-spacing: 5px;">
                   ${code}
                 </span>
               </div>
-              <p>This code will expire in 10 minutes.</p>
-              <p style="color: #666; font-size: 14px;">If you didn't request this, please ignore this email.</p>
+              <p style="color: #000000;">This code will expire in 10 minutes.</p>
+              <p style="color: #666666; font-size: 14px;">If you did not request this, please ignore this email.</p>
             </div>
           </div>
         `,

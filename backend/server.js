@@ -71,10 +71,15 @@ const allowedOrigins = [
 
 app.use(cors({
     origin: function (origin, callback) {
+        // Allow requests with no origin (like mobile apps or file://)
         if (!origin) return callback(null, true);
+        // Allow file:// protocol for local admin panel
+        if (origin.startsWith('file://')) return callback(null, true);
+        // Check allowed origins list
         if (allowedOrigins.indexOf(origin) !== -1) {
             return callback(null, true);
         } else {
+            console.log('CORS blocked origin:', origin);
             return callback(new Error('Not allowed by CORS'));
         }
     },
@@ -89,6 +94,12 @@ app.use(express.urlencoded({ limit: '50mb', extended: true }));
 app.use(express.static(path.join(__dirname, '../public')));
 app.use('/src', express.static(path.join(__dirname, '../src')));
 
+// Serve admin panel
+app.use('/admin', express.static(path.join(__dirname, '../admin')));
+
+// Serve admin panel
+app.use('/admin', express.static(path.join(__dirname, '../admin')));
+
 // --------------------
 // Setup all routes using shared module
 // --------------------
@@ -101,6 +112,11 @@ app.get('/', (req, res) => {
         status: 'ok',
         timestamp: new Date().toISOString()
     });
+});
+
+// Simple favicon handler
+app.get('/favicon.ico', (req, res) => {
+    res.status(204).send(); // No content
 });
 
 // Test endpoint to add passcode to existing SmartLocket (development only)

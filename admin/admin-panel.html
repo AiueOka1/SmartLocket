@@ -7,6 +7,51 @@
     <link rel="stylesheet" href="admin-style.css">
 </head>
 <body>
+    <!-- Login Section -->
+    <div id="loginSection" class="login-container">
+        <div class="login-box">
+            <div class="login-header">
+                <h1>SmartLocket Admin</h1>
+                <p>Secure Admin Panel Access</p>
+            </div>
+            <form id="loginForm" class="login-form">
+                <div class="form-group">
+                    <label for="username">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+                            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" stroke="currentColor" stroke-width="2"/>
+                            <circle cx="12" cy="7" r="4" stroke="currentColor" stroke-width="2"/>
+                        </svg>
+                        Username
+                    </label>
+                    <input type="text" id="username" placeholder="Enter username" required autocomplete="username">
+                </div>
+                <div class="form-group">
+                    <label for="password">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+                            <rect x="3" y="11" width="18" height="11" rx="2" ry="2" stroke="currentColor" stroke-width="2"/>
+                            <circle cx="12" cy="16" r="1" stroke="currentColor" stroke-width="2"/>
+                            <path d="M7 11V7a5 5 0 0 1 10 0v4" stroke="currentColor" stroke-width="2"/>
+                        </svg>
+                        Password
+                    </label>
+                    <input type="password" id="password" placeholder="Enter password" required autocomplete="current-password">
+                </div>
+                <button type="submit" class="login-btn">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                        <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4M10 17l5-5-5-5M21 12H9" stroke="currentColor" stroke-width="2"/>
+                    </svg>
+                    Sign In
+                </button>
+                <div id="loginError" class="login-error" style="display: none;"></div>
+            </form>
+            <div class="login-footer">
+                <small>SmartLocket Admin Panel v2.0</small>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Admin Panel (hidden initially) -->
+    <div id="adminPanel" style="display: none;">
     <nav class="admin-nav">
         <div class="admin-logo">
             <h1>SmartLocket Admin</h1>
@@ -162,7 +207,7 @@
                     <div class="form-group checkbox-group">
                         <label class="checkbox-label">
                             <input type="checkbox" id="isPremium">
-                            <span>⭐ Mark as Premium Batch</span>
+                            <span>Mark as Premium Batch</span>
                         </label>
                         <small>Premium accounts get extra features and benefits</small>
                     </div>
@@ -181,7 +226,7 @@
 
                 <div id="generateResult" class="generate-result" style="display: none;">
                     <div class="result-header">
-                        <h3>✅ Batch Generated Successfully!</h3>
+                        <h3>Batch Generated Successfully</h3>
                         <p>Your SmartLockets have been created</p>
                     </div>
                     <div class="result-stats">
@@ -275,6 +320,7 @@
                             <th>Email</th>
                             <th>Created</th>
                             <th>Activated</th>
+                            <th>Link</th>
                             <th>Actions</th>
                         </tr>
                     </thead>
@@ -327,7 +373,7 @@
                         <button class="btn-primary" onclick="loadNextUnused()">
                             Next Unused SmartLocket
                         </button>
-                        <button class="btn-secondary" onclick="copyToClipboard()">
+                        <button class="btn-secondary" onclick="copyCurrentSmartLocketUrl()">
                             <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
                                 <rect x="9" y="9" width="13" height="13" rx="2" stroke="currentColor" stroke-width="2"/>
                                 <path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1" stroke="currentColor" stroke-width="2"/>
@@ -399,6 +445,7 @@
         </section>
         -->
     </main>
+    </div>
 
     <script src="admin-script.js"></script>
 </body>
