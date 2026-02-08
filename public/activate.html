@@ -1,11 +1,13 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Activate Your SmartLocket</title>
     <link rel="stylesheet" href="activate-style.css">
 </head>
+
 <body>
     <div class="activation-container">
         <div class="activation-card">
@@ -38,7 +40,7 @@
                 <div class="info-box">
                     <p>Enter your email to secure your SmartLocket. We'll send you a verification code.</p>
                 </div>
-                
+
                 <form id="emailForm">
                     <div class="form-group">
                         <label for="email">Email Address</label>
@@ -54,7 +56,7 @@
                 <div class="info-box">
                     <p>Enter the 6-digit code sent to <strong id="emailDisplay"></strong></p>
                 </div>
-                
+
                 <form id="verificationForm">
                     <div class="form-group">
                         <label>Verification Code</label>
@@ -80,16 +82,42 @@
                 <div class="info-box">
                     <p>Create your personal passcode to edit your SmartLocket</p>
                 </div>
-                
+
                 <form id="passcodeForm">
                     <div class="form-group">
-                        <label for="passcode">Create Passcode</label>
-                        <input type="password" id="passcode" placeholder="Enter your passcode" required maxlength="6">
-                        <small>At least 6 characters. You'll need this to edit your gallery.</small>
+                        <label>Create Passcode</label>
+                        <div class="passcode-input">
+                            <input type="text" maxlength="1" class="passcode-digit" data-index="0" inputmode="numeric"
+                                pattern="[0-9]">
+                            <input type="text" maxlength="1" class="passcode-digit" data-index="1" inputmode="numeric"
+                                pattern="[0-9]">
+                            <input type="text" maxlength="1" class="passcode-digit" data-index="2" inputmode="numeric"
+                                pattern="[0-9]">
+                            <input type="text" maxlength="1" class="passcode-digit" data-index="3" inputmode="numeric"
+                                pattern="[0-9]">
+                            <input type="text" maxlength="1" class="passcode-digit" data-index="4" inputmode="numeric"
+                                pattern="[0-9]">
+                            <input type="text" maxlength="1" class="passcode-digit" data-index="5" inputmode="numeric"
+                                pattern="[0-9]">
+                        </div>
+                        <small>Enter 6 digits. You'll need this to edit your gallery.</small>
                     </div>
                     <div class="form-group">
-                        <label for="confirmPasscode">Confirm Passcode</label>
-                        <input type="password" id="confirmPasscode" placeholder="Confirm your passcode" required maxlength="6">
+                        <label>Confirm Passcode</label>
+                        <div class="confirm-passcode-input">
+                            <input type="text" maxlength="1" class="confirm-passcode-digit" data-index="0"
+                                inputmode="numeric" pattern="[0-9]">
+                            <input type="text" maxlength="1" class="confirm-passcode-digit" data-index="1"
+                                inputmode="numeric" pattern="[0-9]">
+                            <input type="text" maxlength="1" class="confirm-passcode-digit" data-index="2"
+                                inputmode="numeric" pattern="[0-9]">
+                            <input type="text" maxlength="1" class="confirm-passcode-digit" data-index="3"
+                                inputmode="numeric" pattern="[0-9]">
+                            <input type="text" maxlength="1" class="confirm-passcode-digit" data-index="4"
+                                inputmode="numeric" pattern="[0-9]">
+                            <input type="text" maxlength="1" class="confirm-passcode-digit" data-index="5"
+                                inputmode="numeric" pattern="[0-9]">
+                        </div>
                     </div>
                     <button type="submit" class="btn btn-primary">Complete Activation</button>
                 </form>
@@ -101,7 +129,8 @@
                     <div class="success-icon">✓</div>
                     <h2>Activation Complete!</h2>
                     <p>Your SmartLocket is now active and ready to use.</p>
-                    <p id="redirectMessage" style="color: #667eea; margin-top: 10px;">Redirecting to your gallery in <span id="countdown">2</span> seconds...</p>
+                    <p id="redirectMessage" style="color: #667eea; margin-top: 10px;">Redirecting to your gallery in
+                        <span id="countdown">2</span> seconds...</p>
                     <button class="btn btn-primary" onclick="goToGallery()">Go Now</button>
                 </div>
             </div>
@@ -113,7 +142,7 @@
     <script>
         // API_BASE_URL is already defined in config.js, no need to redeclare
         console.log('🔍 ACTIVATION PAGE: Starting to load, API_BASE_URL:', window.API_BASE_URL);
-        
+
         // Get Memory ID using the shared function from script.js
         const memoryId = getMemoryIdFromURL();
         let userEmail = '';
@@ -123,9 +152,9 @@
         console.log('Memory ID extracted:', memoryId);
         console.log('Full URL:', window.location.href);
         console.log('Query params:', Object.fromEntries(new URLSearchParams(window.location.search)));
-        
+
         // Wait for DOM to be ready before setting the display
-        document.addEventListener('DOMContentLoaded', function() {
+        document.addEventListener('DOMContentLoaded', function () {
             console.log('🔍 ACTIVATION PAGE: DOM loaded');
             const displayElement = document.getElementById('memoryIdDisplay');
             if (displayElement) {
@@ -214,15 +243,15 @@
             try {
                 const response = await fetch(`${API_BASE_URL}/api/activation/complete`, {
                     method: 'POST',
-                    headers: { 
+                    headers: {
                         'Content-Type': 'application/json',
                         'Authorization': `Bearer ${verificationToken}`
                     },
-                    body: JSON.stringify({ 
-                        memoryId, 
-                        email: userEmail, 
+                    body: JSON.stringify({
+                        memoryId,
+                        email: userEmail,
                         passcode,
-                        verificationCode: verificationCode 
+                        verificationCode: verificationCode
                     })
                 });
 
@@ -232,7 +261,7 @@
                     goToStep(4);
                     // Store session token
                     sessionStorage.setItem('editToken', data.sessionToken);
-                    
+
                     // Countdown timer
                     let countdown = 2;
                     const countdownElement = document.getElementById('countdown');
@@ -348,7 +377,7 @@
         async function checkActivationStatus() {
             try {
                 const response = await fetch(`${API_BASE_URL}/api/memory/${memoryId}`);
-                
+
                 if (!response.ok) {
                     // 404 means not found - that's okay, user needs to activate
                     if (response.status === 404) {
@@ -357,7 +386,7 @@
                     }
                     throw new Error(`HTTP ${response.status}`);
                 }
-                
+
                 const data = await response.json();
 
                 if (data.status === 'activated') {
@@ -372,17 +401,18 @@
 
         // Don't automatically check status on page load for new activations
         // checkActivationStatus(); // Commented out to prevent redirect loops
-        
+
         // Add error handler to catch any unhandled errors
-        window.addEventListener('error', function(e) {
+        window.addEventListener('error', function (e) {
             console.error('🔍 ACTIVATION PAGE: Unhandled error:', e.error);
         });
-        
-        window.addEventListener('unhandledrejection', function(e) {
+
+        window.addEventListener('unhandledrejection', function (e) {
             console.error('🔍 ACTIVATION PAGE: Unhandled promise rejection:', e.reason);
         });
-        
+
         console.log('🔍 ACTIVATION PAGE: Script fully loaded');
     </script>
 </body>
+
 </html>
