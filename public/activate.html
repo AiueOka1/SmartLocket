@@ -85,39 +85,18 @@
 
                 <form id="passcodeForm">
                     <div class="form-group">
-                        <label>Create Passcode</label>
-                        <div class="passcode-input">
-                            <input type="text" maxlength="1" class="passcode-digit" data-index="0" inputmode="numeric"
-                                pattern="[0-9]">
-                            <input type="text" maxlength="1" class="passcode-digit" data-index="1" inputmode="numeric"
-                                pattern="[0-9]">
-                            <input type="text" maxlength="1" class="passcode-digit" data-index="2" inputmode="numeric"
-                                pattern="[0-9]">
-                            <input type="text" maxlength="1" class="passcode-digit" data-index="3" inputmode="numeric"
-                                pattern="[0-9]">
-                            <input type="text" maxlength="1" class="passcode-digit" data-index="4" inputmode="numeric"
-                                pattern="[0-9]">
-                            <input type="text" maxlength="1" class="passcode-digit" data-index="5" inputmode="numeric"
-                                pattern="[0-9]">
-                        </div>
-                        <small>Enter 6 digits. You'll need this to edit your gallery.</small>
+                        <label for="passcode">Create Passcode</label>
+                        <input type="password" id="passcode" placeholder="Enter your passcode" required
+                            maxlength="6" pattern="[0-9]{6}" inputmode="numeric"
+                            style="font-size: 1.2rem; letter-spacing: 0.3em; text-align: center;">
+
+                        <small>At least 6 Characters. You'll need this to edit your gallery.</small>
                     </div>
                     <div class="form-group">
-                        <label>Confirm Passcode</label>
-                        <div class="confirm-passcode-input">
-                            <input type="text" maxlength="1" class="confirm-passcode-digit" data-index="0"
-                                inputmode="numeric" pattern="[0-9]">
-                            <input type="text" maxlength="1" class="confirm-passcode-digit" data-index="1"
-                                inputmode="numeric" pattern="[0-9]">
-                            <input type="text" maxlength="1" class="confirm-passcode-digit" data-index="2"
-                                inputmode="numeric" pattern="[0-9]">
-                            <input type="text" maxlength="1" class="confirm-passcode-digit" data-index="3"
-                                inputmode="numeric" pattern="[0-9]">
-                            <input type="text" maxlength="1" class="confirm-passcode-digit" data-index="4"
-                                inputmode="numeric" pattern="[0-9]">
-                            <input type="text" maxlength="1" class="confirm-passcode-digit" data-index="5"
-                                inputmode="numeric" pattern="[0-9]">
-                        </div>
+                        <label for="confirmPasscode">Confirm Passcode</label>
+                        <input type="password" id="confirmPasscode" placeholder="Confirm your passcode" required
+                            maxlength="6" pattern="[0-9]{6}" inputmode="numeric"
+                            style="font-size: 1.2rem; letter-spacing: 0.3em; text-align: center;">
                     </div>
                     <button type="submit" class="btn btn-primary">Complete Activation</button>
                 </form>
@@ -130,7 +109,8 @@
                     <h2>Activation Complete!</h2>
                     <p>Your SmartLocket is now active and ready to use.</p>
                     <p id="redirectMessage" style="color: #667eea; margin-top: 10px;">Redirecting to your gallery in
-                        <span id="countdown">2</span> seconds...</p>
+                        <span id="countdown">2</span> seconds...
+                    </p>
                     <button class="btn btn-primary" onclick="goToGallery()">Go Now</button>
                 </div>
             </div>
