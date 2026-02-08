@@ -398,9 +398,52 @@ async function saveGalleryData(galleryData) {
 // ENVELOPE & LETTER ZOOM ANIMATION
 // ========================================
 
+// iOS Safari scroll fix for image grid
+function fixIOSScrolling() {
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+    
+    if (isIOS) {
+        const imageGrid = document.getElementById('imageGrid');
+        const editOverlay = document.getElementById('editOverlay');
+        
+        if (imageGrid) {
+            // Force reflow on iOS
+            imageGrid.style.transform = 'translateZ(0)';
+            imageGrid.style.webkitTransform = 'translateZ(0)';
+            
+            // Add touch event listeners for better scrolling
+            imageGrid.addEventListener('touchstart', function(e) {
+                this.style.webkitOverflowScrolling = 'touch';
+            });
+        }
+        
+        if (editOverlay) {
+            // Prevent body scroll when edit overlay is open
+            editOverlay.addEventListener('touchmove', function(e) {
+                if (e.target === this) {
+                    e.preventDefault();
+                }
+            }, { passive: false });
+        }
+        
+        // Fix viewport height issues on iOS
+        function setVH() {
+            const vh = window.innerHeight * 0.01;
+            document.documentElement.style.setProperty('--vh', `${vh}px`);
+        }
+        
+        setVH();
+        window.addEventListener('resize', setVH);
+        window.addEventListener('orientationchange', setVH);
+    }
+}
+
 // Initialize envelope and letter functionality
 document.addEventListener('DOMContentLoaded', async function() {
     try {
+        // Fix iOS scrolling issues first
+        fixIOSScrolling();
+        
         // Skip gallery loading if we're on the activation page
         if (window.location.pathname.includes('activate.html')) {
             console.log('On activation page, skipping gallery data load');
@@ -1371,6 +1414,9 @@ function enterEditMode() {
     editOverlay.classList.add('active');
     document.body.classList.add('edit-mode');
     enableHeaderEditing();
+    
+    // Apply iOS scrolling fixes when edit mode is activated
+    fixIOSScrolling();
     
     if (mainSwiper && mainSwiper.autoplay) {
         mainSwiper.autoplay.stop();
