@@ -583,7 +583,7 @@ function setupRoutes(app, db, admin, r2Client, transporter, bcrypt) {
             </div>
           `,
         });
-        console.log(`📧 New code sent to ${email}`);
+        console.log(`New code sent to ${email}`);
       } catch (emailError) {
         console.log(`⚠️ Email service not configured, verification code: ${verificationCode}`);
         // Don't fail in development if email service isn't configured
