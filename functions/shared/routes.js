@@ -53,51 +53,6 @@ function generateVerificationCode() {
  * @param {Object} bcrypt - bcrypt/bcryptjs module
  */
 function setupRoutes(app, db, admin, r2Client, transporter, bcrypt) {
-  // --------------------
-  // URL Rewriting Middleware - Remove .html extensions
-  // --------------------
-  // Remove trailing slash
-  app.use((req, res, next) => {
-    if (req.path !== '/' && req.path.endsWith('/')) {
-      return res.redirect(301, req.path.slice(0, -1) + req.url.slice(req.path.length));
-    }
-    next();
-  });
-
-  // Redirect .html URLs to extensionless versions
-  app.use((req, res, next) => {
-    if (req.path.endsWith('.html')) {
-      const newPath = req.path.slice(0, -5); // Remove .html
-      return res.redirect(301, newPath + (req.url.slice(req.path.length) || ''));
-    }
-    next();
-  });
-
-  // Handle extensionless URLs by serving corresponding .html files
-  app.use((req, res, next) => {
-    if (!req.path.includes('.') && !req.path.startsWith('/api/')) {
-      // Try to serve the corresponding .html file
-      const path = require('path');
-      const fs = require('fs');
-      
-      // Check if we're in a subdirectory like /public/ or /admin/
-      let htmlPath;
-      if (req.path.startsWith('/public/')) {
-        htmlPath = path.join(__dirname, '../../public', req.path.replace('/public/', '') + '.html');
-      } else if (req.path.startsWith('/admin/')) {
-        htmlPath = path.join(__dirname, '../../admin', req.path.replace('/admin/', '') + '.html');
-      } else {
-        htmlPath = path.join(__dirname, '../../public', req.path + '.html');
-      }
-      
-      // Check if the HTML file exists
-      if (fs.existsSync(htmlPath)) {
-        return res.sendFile(htmlPath);
-      }
-    }
-    next();
-  });
-
   // Import AWS SDK components for Cloudflare R2
   let PutObjectCommand, DeleteObjectCommand;
   if (r2Client) {
@@ -374,6 +329,62 @@ function setupRoutes(app, db, admin, r2Client, transporter, bcrypt) {
     }
   });
 
+  // Get next unused SmartLocket for NFC writing
+  app.get(["/api/admin/next-unused", "/admin/next-unused"], async (req, res) => {
+    try {
+      // First, try to get unused SmartLockets without ordering (no index required)
+      const snapshot = await db.collection("nfcChains")
+        .where("status", "==", "unused")
+        .limit(10)
+        .get();
+
+      if (snapshot.empty) {
+        return res.status(404).json({
+          success: false,
+          message: "No unused SmartLockets available"
+        });
+      }
+
+      // Sort by createdAt manually (since we only have 10 docs, this is efficient)
+      const unusedDocs = [];
+      snapshot.forEach((doc) => {
+        const data = doc.data();
+        unusedDocs.push({
+          id: doc.id,
+          data: data,
+          createdAt: data.createdAt
+        });
+      });
+
+      // Sort by creation time (oldest first)
+      unusedDocs.sort((a, b) => {
+        const timeA = a.createdAt?.toDate?.() || a.createdAt || new Date(0);
+        const timeB = b.createdAt?.toDate?.() || b.createdAt || new Date(0);
+        return timeA - timeB;
+      });
+
+      const firstDoc = unusedDocs[0];
+      const data = firstDoc.data;
+
+      return res.json({
+        success: true,
+        data: {
+          memoryId: data.memoryId || firstDoc.id,
+          viewUrl: data.viewUrl || `https://memorychain.app/${data.memoryId || firstDoc.id}`,
+          photoLimit: data.photoLimit || 5,
+          premium: data.premium || false,
+          createdAt: data.createdAt ? formatTimestamp(data.createdAt) : null
+        }
+      });
+    } catch (error) {
+      console.error("Next unused error:", error);
+      return res.status(500).json({
+        success: false,
+        message: "Failed to get next unused SmartLocket"
+      });
+    }
+  });
+
   // Mark as written
   app.post(["/api/admin/mark-written/:memoryId"], async (req, res) => {
     const {memoryId} = req.params;
@@ -572,7 +583,7 @@ function setupRoutes(app, db, admin, r2Client, transporter, bcrypt) {
             </div>
           `,
         });
-        console.log(`New code sent to ${email}`);
+        console.log(`📧 New code sent to ${email}`);
       } catch (emailError) {
         console.log(`⚠️ Email service not configured, verification code: ${verificationCode}`);
         // Don't fail in development if email service isn't configured
@@ -580,7 +591,7 @@ function setupRoutes(app, db, admin, r2Client, transporter, bcrypt) {
 
       // In development, always log the verification code to console
       if (process.env.NODE_ENV !== 'production') {
-        console.log(`DEV MODE: New verification code for ${memoryId} (${email}): ${verificationCode}`);
+        console.log(`🔑 DEV MODE: New verification code for ${memoryId} (${email}): ${verificationCode}`);
       }
 
       return res.json({
