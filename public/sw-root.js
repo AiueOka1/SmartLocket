@@ -6,7 +6,7 @@ const CACHE_URLS = [
     '/public/activate-style.css',
     '/src/style.css',
     '/src/script.js',
-    '/src/config.js',
+    '/config.js',
     '/src/activate-script.js',
     '/resources/chain.png',
     '/resources/phone.png'
