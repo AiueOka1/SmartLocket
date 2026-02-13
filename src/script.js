@@ -356,6 +356,19 @@ async function loadGalleryData() {
             // Legacy support
             currentSpotifyUrl = data.spotifyUrl;
         }
+        
+        // Load letter content from backend if available
+        if (data.letterContent) {
+            console.log('📝 Loading letter content from backend');
+            const letterTitle = document.querySelector('.zoom-letter h2');
+            const paragraphs = document.querySelectorAll('.zoom-letter p');
+            
+            if (letterTitle) letterTitle.textContent = data.letterContent.title || 'Welcome to SmartLocket';
+            if (paragraphs[0]) paragraphs[0].textContent = data.letterContent.paragraphs?.[0] || '';
+            if (paragraphs[1]) paragraphs[1].textContent = data.letterContent.paragraphs?.[1] || '';
+            if (paragraphs[2]) paragraphs[2].textContent = data.letterContent.paragraphs?.[2] || '';
+        }
+        
         // Return full gallery data
         return data;
     } catch (error) {
@@ -1971,12 +1984,43 @@ window.resetPasscode = resetPasscode;
 // LETTER EDIT MODAL FUNCTIONS
 // ========================================
 
-// Load letter content from localStorage
-function loadLetterContent() {
-    const savedTitle = localStorage.getItem('memorychain-letter-title');
-    const savedPara1 = localStorage.getItem('memorychain-letter-para1');
-    const savedPara2 = localStorage.getItem('memorychain-letter-para2');
-    const savedPara3 = localStorage.getItem('memorychain-letter-para3');
+// Load letter content from backend (Firebase) with localStorage fallback
+async function loadLetterContent() {
+    const memoryId = getMemoryIdFromURL();
+    
+    // Try to load from backend first
+    if (memoryId) {
+        try {
+            const response = await fetch(`${API_BASE_URL}/api/memory/${memoryId}`);
+            if (response.ok) {
+                const data = await response.json();
+                const letterContent = data.letterContent;
+                
+                if (letterContent) {
+                    console.log('📝 Loading letter content from backend for', memoryId);
+                    
+                    const letterTitle = document.querySelector('.zoom-letter h2');
+                    const paragraphs = document.querySelectorAll('.zoom-letter p');
+                    
+                    if (letterTitle) letterTitle.textContent = letterContent.title || 'Welcome to SmartLocket';
+                    if (paragraphs[0]) paragraphs[0].textContent = letterContent.paragraphs?.[0] || '';
+                    if (paragraphs[1]) paragraphs[1].textContent = letterContent.paragraphs?.[1] || '';
+                    if (paragraphs[2]) paragraphs[2].textContent = letterContent.paragraphs?.[2] || '';
+                    
+                    return; // Successfully loaded from backend
+                }
+            }
+        } catch (error) {
+            console.warn('⚠️ Failed to load letter content from backend:', error.message);
+        }
+    }
+    
+    // Fallback: Load from memory-specific localStorage (only for demo mode)
+    const memoryPrefix = memoryId ? `memorychain-${memoryId}-letter` : 'memorychain-letter';
+    const savedTitle = localStorage.getItem(`${memoryPrefix}-title`);
+    const savedPara1 = localStorage.getItem(`${memoryPrefix}-para1`);
+    const savedPara2 = localStorage.getItem(`${memoryPrefix}-para2`);
+    const savedPara3 = localStorage.getItem(`${memoryPrefix}-para3`);
     
     const letterTitle = document.querySelector('.zoom-letter h2');
     const paragraphs = document.querySelectorAll('.zoom-letter p');
@@ -2023,7 +2067,7 @@ function closeLetterEditModal() {
 }
 
 // Save letter content
-function saveLetterContent() {
+async function saveLetterContent() {
     const title = document.getElementById('letterTitle').value;
     const para1 = document.getElementById('letterPara1').value;
     const para2 = document.getElementById('letterPara2').value;
@@ -2035,13 +2079,43 @@ function saveLetterContent() {
         return;
     }
     
-    // Save to localStorage
-    localStorage.setItem('memorychain-letter-title', title);
-    localStorage.setItem('memorychain-letter-para1', para1);
-    localStorage.setItem('memorychain-letter-para2', para2);
-    localStorage.setItem('memorychain-letter-para3', para3);
+    const memoryId = getMemoryIdFromURL();
+    const letterContent = {
+        title: title.trim(),
+        paragraphs: [para1, para2, para3]
+    };
     
-    // Update the actual letter content
+    // Save to backend (Firebase) first
+    if (memoryId) {
+        try {
+            showNotification('💾 Saving letter...', 'info');
+            
+            const response = await fetch(`${API_BASE_URL}/api/memory/${memoryId}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ letterContent })
+            });
+            
+            if (!response.ok) {
+                throw new Error(`Failed to save: ${response.status}`);
+            }
+            
+            console.log('✅ Letter content saved to backend for', memoryId);
+        } catch (error) {
+            console.error('❌ Failed to save letter to backend:', error);
+            showNotification('❌ Failed to save letter content: ' + error.message, 'error');
+            return;
+        }
+    }
+    
+    // Save to memory-specific localStorage as backup (only for demo mode)
+    const memoryPrefix = memoryId ? `memorychain-${memoryId}-letter` : 'memorychain-letter';
+    localStorage.setItem(`${memoryPrefix}-title`, title);
+    localStorage.setItem(`${memoryPrefix}-para1`, para1);
+    localStorage.setItem(`${memoryPrefix}-para2`, para2);
+    localStorage.setItem(`${memoryPrefix}-para3`, para3);
+    
+    // Update the actual letter content in DOM
     const letterTitle = document.querySelector('.zoom-letter h2');
     const paragraphs = document.querySelectorAll('.zoom-letter p');
     
