@@ -370,6 +370,79 @@
     height: 16px;
 }
 
+#letterEditModal .modal-footer {
+    padding: 1.5rem !important;
+    background: var(--background-color) !important;
+    border-top: 2px solid var(--border-color) !important;
+    position: relative !important;
+    z-index: 1000 !important;
+    display: flex !important;
+    gap: 1rem !important;
+    justify-content: space-between !important;
+    flex-wrap: wrap !important;
+}
+
+#letterEditModal .image-cancel-btn,
+#letterEditModal .image-save-btn {
+    min-height: 48px !important;
+    padding: 0.75rem 1.5rem !important;
+    font-size: 1rem !important;
+    font-weight: 600 !important;
+    border-radius: 12px !important;
+    border: 2px solid !important;
+    cursor: pointer !important;
+    transition: all 0.3s ease !important;
+    position: relative !important;
+    z-index: 1001 !important;
+    background: var(--background-color) !important;
+    color: var(--text-color) !important;
+    flex: 1 !important;
+    min-width: 120px !important;
+}
+
+#letterEditModal .image-cancel-btn {
+    border-color: var(--text-secondary) !important;
+    background: var(--surface-color) !important;
+    color: var(--text-color) !important;
+}
+
+#letterEditModal .image-cancel-btn:hover,
+#letterEditModal .image-cancel-btn:focus {
+    border-color: var(--primary-color) !important;
+    background: var(--background-color) !important;
+    transform: translateY(-2px) !important;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
+}
+
+#letterEditModal .image-save-btn {
+    border-color: var(--primary-color) !important;
+    background: var(--primary-color) !important;
+    color: white !important;
+}
+
+#letterEditModal .image-save-btn:hover,
+#letterEditModal .image-save-btn:focus {
+    background: var(--secondary-color) !important;
+    transform: translateY(-2px) !important;
+    box-shadow: 0 6px 18px rgba(var(--primary-color-rgb, 37, 99, 235), 0.4) !important;
+}
+
+/* Mobile responsiveness */
+@media (max-width: 480px) {
+    #letterEditModal .modal-footer {
+        flex-direction: row !important;
+        gap: 1rem !important;
+        padding: 1rem !important;
+    }
+    #letterEditModal .image-cancel-btn,
+    #letterEditModal .image-save-btn {
+        min-width: 0 !important;
+        width: auto !important;
+        justify-content: center !important;
+        font-size: 1rem !important;
+    }
+}
+
 :root {
     --primary-color: #2563eb;
     --secondary-color: #1e40af;

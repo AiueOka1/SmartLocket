@@ -2029,6 +2029,12 @@ function saveLetterContent() {
     const para2 = document.getElementById('letterPara2').value;
     const para3 = document.getElementById('letterPara3').value;
     
+    // Validate inputs
+    if (!title.trim()) {
+        showNotification('❌ Please enter a letter title', 'error');
+        return;
+    }
+    
     // Save to localStorage
     localStorage.setItem('memorychain-letter-title', title);
     localStorage.setItem('memorychain-letter-para1', para1);
@@ -2052,8 +2058,8 @@ function saveLetterContent() {
         paragraphs[2].textContent = para3;
     }
     
-    // Show success message
-    alert('✓ Letter content saved successfully!');
+    // Show success message using your notification system
+    showNotification('✅ Letter content saved successfully!', 'success');
     
     // Close modal
     closeLetterEditModal();
@@ -2072,11 +2078,11 @@ document.addEventListener('DOMContentLoaded', function() {
         checkbox.addEventListener('change', function() {
             localStorage.setItem('memorychain-show-welcome-letter', this.checked.toString());
             
-            // Show message to user
+            // Show message to user using notification system
             if (this.checked) {
-                alert('✓ Welcome letter animation will be shown on next page load');
+                showNotification('✅ Welcome letter animation will be shown on next page load', 'success');
             } else {
-                alert('✓ Welcome letter animation will be skipped on next page load');
+                showNotification('✅ Welcome letter animation will be skipped on next page load', 'info');
             }
         });
     }
