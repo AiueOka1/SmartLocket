@@ -2133,7 +2133,7 @@ async function saveLetterContent() {
     }
     
     // Show success message using your notification system
-    showNotification('✅ Letter content saved successfully!', 'success');
+    showNotification('Letter content saved successfully!', 'success');
     
     // Close modal
     closeLetterEditModal();
@@ -2154,9 +2154,9 @@ document.addEventListener('DOMContentLoaded', function() {
             
             // Show message to user using notification system
             if (this.checked) {
-                showNotification('✅ Welcome letter animation will be shown on next page load', 'success');
+                showNotification('Welcome letter animation will be shown on next page load', 'success');
             } else {
-                showNotification('✅ Welcome letter animation will be skipped on next page load', 'info');
+                showNotification('Welcome letter animation will be skipped on next page load', 'info');
             }
         });
     }
