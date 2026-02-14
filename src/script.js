@@ -34,35 +34,35 @@ let R2_PUBLIC_URL = window.R2_PUBLIC_URL || window.LOCKED_CONFIG?.R2_PUBLIC_URL 
 // Enhanced image loading with automatic fallback
 function createOptimizedImage(src, alt = '', className = '') {
     const img = document.createElement('img');
-    
+
     // Set basic attributes
     img.alt = alt;
     if (className) img.className = className;
     img.loading = 'lazy';
-    
+
     // Set initial source
     img.src = src;
-    
+
     // Add automatic fallback for blocked domains
-    img.addEventListener('error', function() {
+    img.addEventListener('error', function () {
         // If R2 direct URL fails, try API proxy
         if (this.src.includes('pub-5d6eb9dacf9146a2bd3bff425e11c1b2.r2.dev')) {
             console.log('📱 R2 blocked, trying API proxy fallback...');
             const imagePath = this.src.split('pub-5d6eb9dacf9146a2bd3bff425e11c1b2.r2.dev/')[1];
             if (imagePath) {
                 const isProduction = !window.location.href.includes('localhost');
-                const baseUrl = isProduction ? 
+                const baseUrl = isProduction ?
                     (window.LOCKED_CONFIG?.API_PRODUCTION || API_BASE_URL) :
                     (window.LOCKED_CONFIG?.API_LOCAL || API_BASE_URL);
                 this.src = `${baseUrl}/api/image/${imagePath}?fallback=${Date.now()}`;
                 return;
             }
         }
-        
+
         // All sources failed - hide image and show CSS placeholder
         console.log('🔧 All sources failed, using CSS placeholder...');
         this.style.display = 'none';
-        
+
         const parent = this.parentElement;
         if (parent) {
             parent.style.background = 'linear-gradient(45deg, #ffffffff, #ffffffff)';
@@ -75,14 +75,14 @@ function createOptimizedImage(src, alt = '', className = '') {
             parent.innerHTML = '<div style="text-align: center; padding: 20px;"><div></div><div>Upload an image</div><div style="font-size: 14px; opacity: 0.8;"></div></div>';
         }
     });
-    
+
     return img;
 }
 
 // 🔒 LOCKED getImageUrl function - DO NOT MODIFY PATHS!
 function getImageUrl(src, forceCacheBust = false) {
     if (!src) return '';
-    
+
     // � MOBILE CARRIER FIX - Always use Cloudflare Worker relay for ALL images
     if (src.includes('pub-5d6eb9dacf9146a2bd3bff425e11c1b2.r2.dev')) {
         // Extract the path after the domain
@@ -91,7 +91,7 @@ function getImageUrl(src, forceCacheBust = false) {
             let imagePath = urlParts[1].split('?')[0]; // Remove any existing query params
             // Use Cloudflare Worker relay - carrier sees YOUR domain, not R2
             const relayUrl = `${ASSETS_RELAY_URL}/${imagePath}`;
-            
+
             if (forceCacheBust) {
                 return `${relayUrl}?v=${Date.now()}`;
             }
@@ -99,18 +99,18 @@ function getImageUrl(src, forceCacheBust = false) {
         }
         return src;
     }
-    
+
     // � Handle localhost API URLs - also route through relay in production
     if (src.includes('/api/image/')) {
         const imagePath = src.split('/api/image/')[1];
         const relayUrl = `${ASSETS_RELAY_URL}/${imagePath}`;
-        
+
         if (forceCacheBust) {
             return `${relayUrl}?v=${Date.now()}`;
         }
         return relayUrl;
     }
-    
+
     // Return as-is if already a complete URL (not R2 or API)
     if (src.startsWith('http://') || src.startsWith('https://') || src.startsWith('data:')) {
         // Add cache-busting when forced
@@ -121,10 +121,10 @@ function getImageUrl(src, forceCacheBust = false) {
         }
         return src;
     }
-    
+
     // � Handle relative paths - always use Cloudflare Worker relay
     const relayUrl = `${ASSETS_RELAY_URL}/${src}`;
-    
+
     if (forceCacheBust) {
         return `${relayUrl}?v=${Date.now()}`;
     }
@@ -134,16 +134,16 @@ function getImageUrl(src, forceCacheBust = false) {
 // Force refresh all images for mobile data users having cache issues
 function forceRefreshImages() {
     console.log('🔄 Force refreshing all images for mobile data...');
-    
+
     // Detect mobile data connection
     const connection = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
     const isMobileData = connection && connection.type && !connection.type.includes('wifi');
-    
+
     if (!isMobileData) {
         console.log('📶 Not on mobile data, refresh not needed');
         return;
     }
-    
+
     // Force refresh all gallery images
     const allImages = document.querySelectorAll('.swiper-slide img, .slide-content img');
     allImages.forEach((img, index) => {
@@ -151,12 +151,12 @@ function forceRefreshImages() {
             // Add timestamp to force cache bust
             const separator = img.src.includes('?') ? '&' : '?';
             const newSrc = `${img.src.split('?')[0]}${separator}v=${Date.now()}&refresh=1`;
-            
+
             console.log(`📱 Refreshing image ${index + 1}/${allImages.length}: ${newSrc}`);
             img.src = newSrc;
         }
     });
-    
+
     // Show brief notification
     showNetworkStatus('📱 Images refreshed for mobile data', 'mobile', 3000);
 }
@@ -171,11 +171,11 @@ function showNetworkStatus(message, type = 'info', duration = 2000) {
         statusEl.className = 'network-status';
         document.body.appendChild(statusEl);
     }
-    
+
     // Update content and show
     statusEl.textContent = message;
     statusEl.className = `network-status show ${type}`;
-    
+
     // Auto hide after duration
     setTimeout(() => {
         statusEl.classList.remove('show');
@@ -195,21 +195,21 @@ function getMemoryIdFromURL() {
     // Check URL patterns: /m/MEMORYID or ?id=MEMORYID
     const urlParams = new URLSearchParams(window.location.search);
     const memoryIdFromQuery = urlParams.get('id');
-    
+
     // If we have a query param, use that (for activate.html?id=MEMORYID)
     if (memoryIdFromQuery && memoryIdFromQuery !== 'activate.html') {
         return memoryIdFromQuery;
     }
-    
+
     // Otherwise check path parts
     const pathParts = window.location.pathname.split('/');
     const memoryIdFromPath = pathParts[pathParts.length - 1];
-    
+
     // Return path ID only if it's not a filename
-    return memoryIdFromPath && 
-           !memoryIdFromPath.includes('.html') && 
-           memoryIdFromPath !== '' 
-        ? memoryIdFromPath 
+    return memoryIdFromPath &&
+        !memoryIdFromPath.includes('.html') &&
+        memoryIdFromPath !== ''
+        ? memoryIdFromPath
         : memoryIdFromQuery;
 }
 
@@ -219,9 +219,9 @@ const MEMORY_ID = getMemoryIdFromURL();
 // Network status indicator
 function initNetworkStatusIndicator() {
     const connection = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
-    
+
     if (!connection) return; // Skip if not supported
-    
+
     const statusDiv = document.createElement('div');
     statusDiv.id = 'network-status';
     statusDiv.style.cssText = `
@@ -238,11 +238,11 @@ function initNetworkStatusIndicator() {
         border: 1px solid rgba(255, 255, 255, 0.2);
         display: none;
     `;
-    
+
     function updateNetworkStatus() {
         const isSlowConnection = connection.effectiveType === 'slow-2g' || connection.effectiveType === '2g';
         const isMobileData = connection.type && !connection.type.includes('wifi');
-        
+
         if (isSlowConnection || isMobileData) {
             statusDiv.style.display = 'block';
             if (isSlowConnection) {
@@ -258,16 +258,16 @@ function initNetworkStatusIndicator() {
             statusDiv.style.display = 'none';
         }
     }
-    
+
     // Add to page
     document.body.appendChild(statusDiv);
-    
+
     // Update on connection change
     connection.addEventListener('change', updateNetworkStatus);
-    
+
     // Initial update
     updateNetworkStatus();
-    
+
     // Auto-hide after 5 seconds
     setTimeout(() => {
         statusDiv.style.opacity = '0.7';
@@ -347,6 +347,11 @@ async function loadGalleryData() {
         }
         // Update image counter display with correct max
         updateImageCounter();
+        
+        // --- VIDEO SECTION: Set video URL and update UI ---
+        window.currentGalleryVideoUrl = data.videoUrl || null;
+        updateVideoSection();
+        
         // Load Spotify track if available
         if (data.spotifyTrack) {
             currentSpotifyTrack = data.spotifyTrack;
@@ -356,19 +361,19 @@ async function loadGalleryData() {
             // Legacy support
             currentSpotifyUrl = data.spotifyUrl;
         }
-        
+
         // Load letter content from backend if available
         if (data.letterContent) {
             console.log('📝 Loading letter content from backend');
             const letterTitle = document.querySelector('.zoom-letter h2');
             const paragraphs = document.querySelectorAll('.zoom-letter p');
-            
+
             if (letterTitle) letterTitle.textContent = data.letterContent.title || 'Welcome to SmartLocket';
             if (paragraphs[0]) paragraphs[0].textContent = data.letterContent.paragraphs?.[0] || '';
             if (paragraphs[1]) paragraphs[1].textContent = data.letterContent.paragraphs?.[1] || '';
             if (paragraphs[2]) paragraphs[2].textContent = data.letterContent.paragraphs?.[2] || '';
         }
-        
+
         // Return full gallery data
         return data;
     } catch (error) {
@@ -412,14 +417,14 @@ async function saveGalleryData(galleryData) {
 // ========================================
 
 // Initialize envelope and letter functionality
-document.addEventListener('DOMContentLoaded', async function() {
+document.addEventListener('DOMContentLoaded', async function () {
     try {
         // Skip gallery loading if we're on the activation page
         if (window.location.pathname.includes('activate.html')) {
             console.log('On activation page, skipping gallery data load');
             return;
         }
-        
+
         // Show loading state while checking Memory ID
         if (MEMORY_ID) {
             document.body.style.opacity = '0.5';
@@ -427,215 +432,215 @@ document.addEventListener('DOMContentLoaded', async function() {
         }
         // Load gallery data first (will redirect if not activated)
         const galleryData = await loadGalleryData();
-        
+
         // If we got here, the NFCchain is activated
-    if (galleryData) {
-        // Remove loading state
-        document.body.style.opacity = '1';
-        // Apply loaded data to the page
-        if (galleryData.galleryTitle) {
-            const galleryTitle = document.getElementById('galleryTitle');
-            if (galleryTitle) {
-                galleryTitle.textContent = galleryData.galleryTitle;
+        if (galleryData) {
+            // Remove loading state
+            document.body.style.opacity = '1';
+            // Apply loaded data to the page
+            if (galleryData.galleryTitle) {
+                const galleryTitle = document.getElementById('galleryTitle');
+                if (galleryTitle) {
+                    galleryTitle.textContent = galleryData.galleryTitle;
+                }
             }
-        }
-        // Load letter content
-        if (galleryData.letterContent) {
-            const letter = galleryData.letterContent;
-            const letterTitle = document.querySelector('.zoom-letter h2');
-            if (letterTitle) {
-                letterTitle.textContent = letter.title || 'Welcome to SmartLocket';
+            // Load letter content
+            if (galleryData.letterContent) {
+                const letter = galleryData.letterContent;
+                const letterTitle = document.querySelector('.zoom-letter h2');
+                if (letterTitle) {
+                    letterTitle.textContent = letter.title || 'Welcome to SmartLocket';
+                }
+                const paragraphs = document.querySelectorAll('.zoom-letter p');
+                if (letter.paragraphs && letter.paragraphs.length > 0) {
+                    letter.paragraphs.forEach((text, index) => {
+                        if (paragraphs[index]) {
+                            paragraphs[index].textContent = text;
+                        }
+                    });
+                }
             }
-            const paragraphs = document.querySelectorAll('.zoom-letter p');
-            if (letter.paragraphs && letter.paragraphs.length > 0) {
-                letter.paragraphs.forEach((text, index) => {
-                    if (paragraphs[index]) {
-                        paragraphs[index].textContent = text;
-                    }
-                });
-            }
-        }
-        // Store globally for use by other functions (including theme settings)
-        window.currentGalleryData = galleryData;
-        // Apply theme settings after a short delay to ensure all functions are loaded
-        setTimeout(() => {
-            applyLoadedThemeSettings(galleryData.themeSettings);
-        }, 100);
-    } else {
-        // No gallery data and no redirect happened - probably demo mode
-        document.body.style.opacity = '1';
-    }
-    const envelope = document.querySelector('.envelope-wrapper');
-    const envelopeContainer = document.getElementById('envelopeContainer');
-    const letterZoom = document.getElementById('letterZoom');
-    const zoomLetter = document.getElementById('zoomLetter');
-    const body = document.body;
-    
-    let isEnvelopeOpen = false;
-    let letterZoomStart = 0;
-
-    // CRITICAL: Force scroll to top on page load to prevent cached scroll position
-    // This ensures the letter doesn't skip when refreshing the page
-    if ('scrollRestoration' in history) {
-        history.scrollRestoration = 'manual';
-    }
-    window.scrollTo(0, 0);
-
-    // Check if welcome letter should be shown
-    const showWelcomeLetter = localStorage.getItem('memorychain-show-welcome-letter');
-    
-    if (showWelcomeLetter === 'false') {
-        // Skip envelope and letter, go straight to gallery
-        envelopeContainer.style.display = 'none';
-        letterZoom.style.display = 'none';
-        body.style.overflow = 'auto';
-        body.classList.add('gallery-active');
-        
-        // Initialize Swiper immediately
-        setTimeout(() => {
-            initializeSwiper();
-            swiperInitialized = true;
-            if (mainSwiper) {
-                setTimeout(() => {
-                    mainSwiper.update();
-                    mainSwiper.updateSlides();
-                    mainSwiper.updateProgress();
-                    mainSwiper.updateSlidesClasses();
-                }, 100);
-            }
-        }, 100);
-    } else {
-        // Show envelope animation
-        body.style.overflow = 'hidden';
-    }
-
-    // Load saved letter content
-    loadLetterContent();
-
-    // Open envelope on click
-    if (envelope) {
-        envelope.addEventListener('click', () => {
-            if (!isEnvelopeOpen) {
-                envelope.classList.add('flap');
-                isEnvelopeOpen = true;
-
-                // After animation, start letter zoom
-                setTimeout(() => {
-                    envelopeContainer.classList.add('fade-out');
-                    setTimeout(() => {
-                        envelopeContainer.style.display = 'none';
-                        letterZoom.style.display = 'flex';
-                        body.style.overflow = 'auto';
-                        
-                        // Force scroll to top before letter becomes active
-                        window.scrollTo(0, 0);
-                        
-                        // Reset the hasUserScrolled flag
-                        hasUserScrolled = false;
-                        
-                        // Wait two frames for proper rendering
-                        requestAnimationFrame(() => {
-                            requestAnimationFrame(() => {
-                                letterZoom.classList.add('active');
-                                
-                                // Ensure we're still at top after activation
-                                window.scrollTo(0, 0);
-                                
-                                // Set the start position after render
-                                setTimeout(() => {
-                                    letterZoomStart = 0; // Letter section starts at top
-                                }, 10);
-                            });
-                        });
-                    }, 500);
-                }, 2000);
-            }
-        });
-    }
-
-    // Track if user has actually scrolled (prevents immediate transition on refresh)
-    let hasUserScrolled = false;
-    let scrollTimeout;
-
-    // Handle scroll for zoom effect
-    window.addEventListener('scroll', () => {
-        if (!letterZoom || !letterZoom.classList.contains('active')) return;
-
-        // Mark that user has scrolled after a brief delay
-        // This prevents cached scroll position from triggering transition
-        clearTimeout(scrollTimeout);
-        scrollTimeout = setTimeout(() => {
-            hasUserScrolled = true;
-        }, 100);
-
-        const scrollPos = window.scrollY;
-        const letterZoomHeight = letterZoom.offsetHeight;
-        const windowHeight = window.innerHeight;
-        
-        // Calculate progress through the letter section
-        // Letter section is 200vh tall, so we need to scroll 2 viewport heights
-        const scrollInSection = scrollPos;
-        const totalScrollDistance = letterZoomHeight - windowHeight;
-        const progress = Math.max(0, Math.min(scrollInSection / totalScrollDistance, 1));
-        
-        console.log('Scroll Progress:', {
-            scrollPos,
-            letterZoomHeight,
-            windowHeight,
-            totalScrollDistance,
-            progress: (progress * 100).toFixed(2) + '%'
-        });
-        
-        // Zoom from 1 to 1.8 (slower, gentler zoom for better mobile readability)
-        const zoomScale = 1 + (progress * 0.8);
-        
-        // Start fully visible, then fade out as it zooms (from 10% to 98%)
-        let opacity = 1;
-        if (progress > 0.10) {
-            // Fade out from 10% to 98% - gradual fade as it zooms
-            opacity = Math.max(0, 1 - ((progress - 0.10) / 0.88));
-        }
-        
-        if (zoomLetter) {
-            zoomLetter.style.transform = `scale(${zoomScale})`;
-            zoomLetter.style.opacity = opacity;
-        }
-
-        // When scrolled past 98%, start transitioning to main content
-        // IMPORTANT: Only transition if user has actually scrolled (not just cached position)
-        if (progress >= 0.98 && !body.classList.contains('gallery-active') && hasUserScrolled) {
-            // Fade out the letter section
-            letterZoom.classList.add('fading-out');
-            
-            // Show main content with smooth transition
+            // Store globally for use by other functions (including theme settings)
+            window.currentGalleryData = galleryData;
+            // Apply theme settings after a short delay to ensure all functions are loaded
             setTimeout(() => {
-                body.classList.add('gallery-active');
-                
-                // Remove letter section from DOM after transition
-                setTimeout(() => {
-                    letterZoom.style.display = 'none';
-                    letterZoom.classList.remove('active');
-                    window.scrollTo(0, 0);
-                    
-                    // Initialize Swiper after content becomes visible
-                    if (!swiperInitialized) {
-                        setTimeout(() => {
-                            initializeSwiper();
-                            swiperInitialized = true;
-                            
-                            // Force Swiper to update and render all slides
-                            if (mainSwiper) {
-                                mainSwiper.update();
-                                mainSwiper.updateSlides();
-                                mainSwiper.updateProgress();
-                                mainSwiper.updateSlidesClasses();
-                            }
-                        }, 100);
-                    }
-                }, 100);
-            }, 200);
+                applyLoadedThemeSettings(galleryData.themeSettings);
+            }, 100);
+        } else {
+            // No gallery data and no redirect happened - probably demo mode
+            document.body.style.opacity = '1';
         }
-    });
+        const envelope = document.querySelector('.envelope-wrapper');
+        const envelopeContainer = document.getElementById('envelopeContainer');
+        const letterZoom = document.getElementById('letterZoom');
+        const zoomLetter = document.getElementById('zoomLetter');
+        const body = document.body;
+
+        let isEnvelopeOpen = false;
+        let letterZoomStart = 0;
+
+        // CRITICAL: Force scroll to top on page load to prevent cached scroll position
+        // This ensures the letter doesn't skip when refreshing the page
+        if ('scrollRestoration' in history) {
+            history.scrollRestoration = 'manual';
+        }
+        window.scrollTo(0, 0);
+
+        // Check if welcome letter should be shown
+        const showWelcomeLetter = localStorage.getItem('memorychain-show-welcome-letter');
+
+        if (showWelcomeLetter === 'false') {
+            // Skip envelope and letter, go straight to gallery
+            envelopeContainer.style.display = 'none';
+            letterZoom.style.display = 'none';
+            body.style.overflow = 'auto';
+            body.classList.add('gallery-active');
+
+            // Initialize Swiper immediately
+            setTimeout(() => {
+                initializeSwiper();
+                swiperInitialized = true;
+                if (mainSwiper) {
+                    setTimeout(() => {
+                        mainSwiper.update();
+                        mainSwiper.updateSlides();
+                        mainSwiper.updateProgress();
+                        mainSwiper.updateSlidesClasses();
+                    }, 100);
+                }
+            }, 100);
+        } else {
+            // Show envelope animation
+            body.style.overflow = 'hidden';
+        }
+
+        // Load saved letter content
+        loadLetterContent();
+
+        // Open envelope on click
+        if (envelope) {
+            envelope.addEventListener('click', () => {
+                if (!isEnvelopeOpen) {
+                    envelope.classList.add('flap');
+                    isEnvelopeOpen = true;
+
+                    // After animation, start letter zoom
+                    setTimeout(() => {
+                        envelopeContainer.classList.add('fade-out');
+                        setTimeout(() => {
+                            envelopeContainer.style.display = 'none';
+                            letterZoom.style.display = 'flex';
+                            body.style.overflow = 'auto';
+
+                            // Force scroll to top before letter becomes active
+                            window.scrollTo(0, 0);
+
+                            // Reset the hasUserScrolled flag
+                            hasUserScrolled = false;
+
+                            // Wait two frames for proper rendering
+                            requestAnimationFrame(() => {
+                                requestAnimationFrame(() => {
+                                    letterZoom.classList.add('active');
+
+                                    // Ensure we're still at top after activation
+                                    window.scrollTo(0, 0);
+
+                                    // Set the start position after render
+                                    setTimeout(() => {
+                                        letterZoomStart = 0; // Letter section starts at top
+                                    }, 10);
+                                });
+                            });
+                        }, 500);
+                    }, 2000);
+                }
+            });
+        }
+
+        // Track if user has actually scrolled (prevents immediate transition on refresh)
+        let hasUserScrolled = false;
+        let scrollTimeout;
+
+        // Handle scroll for zoom effect
+        window.addEventListener('scroll', () => {
+            if (!letterZoom || !letterZoom.classList.contains('active')) return;
+
+            // Mark that user has scrolled after a brief delay
+            // This prevents cached scroll position from triggering transition
+            clearTimeout(scrollTimeout);
+            scrollTimeout = setTimeout(() => {
+                hasUserScrolled = true;
+            }, 100);
+
+            const scrollPos = window.scrollY;
+            const letterZoomHeight = letterZoom.offsetHeight;
+            const windowHeight = window.innerHeight;
+
+            // Calculate progress through the letter section
+            // Letter section is 200vh tall, so we need to scroll 2 viewport heights
+            const scrollInSection = scrollPos;
+            const totalScrollDistance = letterZoomHeight - windowHeight;
+            const progress = Math.max(0, Math.min(scrollInSection / totalScrollDistance, 1));
+
+            console.log('Scroll Progress:', {
+                scrollPos,
+                letterZoomHeight,
+                windowHeight,
+                totalScrollDistance,
+                progress: (progress * 100).toFixed(2) + '%'
+            });
+
+            // Zoom from 1 to 1.8 (slower, gentler zoom for better mobile readability)
+            const zoomScale = 1 + (progress * 0.8);
+
+            // Start fully visible, then fade out as it zooms (from 10% to 98%)
+            let opacity = 1;
+            if (progress > 0.10) {
+                // Fade out from 10% to 98% - gradual fade as it zooms
+                opacity = Math.max(0, 1 - ((progress - 0.10) / 0.88));
+            }
+
+            if (zoomLetter) {
+                zoomLetter.style.transform = `scale(${zoomScale})`;
+                zoomLetter.style.opacity = opacity;
+            }
+
+            // When scrolled past 98%, start transitioning to main content
+            // IMPORTANT: Only transition if user has actually scrolled (not just cached position)
+            if (progress >= 0.98 && !body.classList.contains('gallery-active') && hasUserScrolled) {
+                // Fade out the letter section
+                letterZoom.classList.add('fading-out');
+
+                // Show main content with smooth transition
+                setTimeout(() => {
+                    body.classList.add('gallery-active');
+
+                    // Remove letter section from DOM after transition
+                    setTimeout(() => {
+                        letterZoom.style.display = 'none';
+                        letterZoom.classList.remove('active');
+                        window.scrollTo(0, 0);
+
+                        // Initialize Swiper after content becomes visible
+                        if (!swiperInitialized) {
+                            setTimeout(() => {
+                                initializeSwiper();
+                                swiperInitialized = true;
+
+                                // Force Swiper to update and render all slides
+                                if (mainSwiper) {
+                                    mainSwiper.update();
+                                    mainSwiper.updateSlides();
+                                    mainSwiper.updateProgress();
+                                    mainSwiper.updateSlidesClasses();
+                                }
+                            }, 100);
+                        }
+                    }, 100);
+                }, 200);
+            }
+        });
 
     } catch (error) {
         console.error('DOMContentLoaded error:', error);
@@ -652,7 +657,7 @@ document.addEventListener('DOMContentLoaded', async function() {
 
 // Test if JavaScript is loading
 console.log('🚀 JavaScript file loaded successfully!');
-window.addEventListener('load', function() {
+window.addEventListener('load', function () {
     console.log('🎯 Window loaded, all scripts ready!');
 });
 
@@ -670,7 +675,7 @@ let memories = [
     },
     {
         id: 1,
-        title: "Beautiful Memory #2", 
+        title: "Beautiful Memory #2",
         description: "Another precious moment waiting to be captured and shared. Every memory tells a unique story.",
         fullImage: "https://via.placeholder.com/800x500/8b5cf6/ffffff?text=Memory+2",
         thumbnail: "https://via.placeholder.com/120x80/8b5cf6/ffffff?text=M2",
@@ -738,36 +743,36 @@ function initBrowserCompatibility() {
     const isSafari = userAgent.includes('safari') && !userAgent.includes('chrome');
     const isEdge = userAgent.includes('edge') || userAgent.includes('edg');
     const isMobile = /android|iphone|ipad|ipod|blackberry|iemobile|opera mini/i.test(userAgent);
-    
+
     console.log('🌐 Browser detected:', {
         isOperaGX,
-        isFirefox, 
+        isFirefox,
         isSafari,
         isEdge,
         isMobile
     });
-    
+
     // Apply browser-specific fixes
     if (isOperaGX) {
         // Opera GX specific optimizations
         document.documentElement.style.setProperty('--browser-optimization', 'opera-gx');
-        
+
         // Fix viewport scaling issues in Opera GX
         const viewport = document.querySelector('meta[name="viewport"]');
         if (viewport) {
             viewport.setAttribute('content', 'width=device-width, initial-scale=1.0, user-scalable=no, shrink-to-fit=no');
         }
-        
+
         // Enhance touch responsiveness for Opera GX
-        document.addEventListener('touchstart', function() {}, { passive: true });
-        
+        document.addEventListener('touchstart', function () { }, { passive: true });
+
         console.log('🎮 Opera GX optimizations applied');
     }
-    
+
     if (isFirefox) {
         // Firefox-specific fixes
         document.documentElement.classList.add('firefox');
-        
+
         // Fix backdrop-filter issues in Firefox
         const style = document.createElement('style');
         style.textContent = `
@@ -776,16 +781,16 @@ function initBrowserCompatibility() {
             }
         `;
         document.head.appendChild(style);
-        
+
         console.log('🦊 Firefox optimizations applied');
     }
-    
+
     if (isSafari) {
         // Safari-specific fixes
         document.documentElement.classList.add('safari');
-        
+
         // Fix image loading issues in Safari
-        document.addEventListener('DOMContentLoaded', function() {
+        document.addEventListener('DOMContentLoaded', function () {
             const images = document.querySelectorAll('img');
             images.forEach(img => {
                 if (!img.loading) {
@@ -793,50 +798,50 @@ function initBrowserCompatibility() {
                 }
             });
         });
-        
+
         console.log('🍎 Safari optimizations applied');
     }
-    
+
     if (isEdge) {
         // Edge-specific fixes
         document.documentElement.classList.add('edge');
         console.log('🔷 Edge optimizations applied');
     }
-    
+
     // Mobile-specific optimizations
     if (isMobile) {
         document.documentElement.classList.add('mobile-browser');
-        
+
         // Prevent double-tap zoom
         let lastTouchEnd = 0;
-        document.addEventListener('touchend', function(event) {
+        document.addEventListener('touchend', function (event) {
             const now = (new Date()).getTime();
             if (now - lastTouchEnd <= 300) {
                 event.preventDefault();
             }
             lastTouchEnd = now;
         }, false);
-        
+
         // Optimize scrolling performance
-        document.addEventListener('touchmove', function(e) {
+        document.addEventListener('touchmove', function (e) {
             if (e.target.closest('.modal-overlay')) {
                 // Allow modal scrolling
                 return;
             }
         }, { passive: true });
-        
+
         console.log('📱 Mobile browser optimizations applied');
     }
 }
 
 // Wait for DOM to be fully loaded
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', function () {
     // Initialize browser compatibility fixes
     initBrowserCompatibility();
-    
+
     // Initialize network status indicator
     initNetworkStatusIndicator();
-    
+
     // Register service worker for enhanced mobile performance
     if ('serviceWorker' in navigator) {
         navigator.serviceWorker.register('/sw.js')
@@ -847,7 +852,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 console.log('❌ Service Worker registration failed:', error);
             });
     }
-    
+
     // Don't initialize Swiper immediately - wait for letter animation
     // initializeSwiper();
 });
@@ -858,16 +863,16 @@ function initializeSwiper() {
         console.error('Swiper wrapper not found!');
         return;
     }
-    
+
     // Destroy existing swiper instance to prevent conflicts
     if (mainSwiper && typeof mainSwiper.destroy === 'function') {
         console.log('🔄 Destroying existing Swiper instance');
         mainSwiper.destroy(true, true);
         mainSwiper = null;
     }
-    
+
     swiperWrapper.innerHTML = ''; // Clear everything
-    
+
     // Debug: Show current state
     console.log(`📊 Gallery Status:`, {
         isPremium: IS_PREMIUM,
@@ -875,14 +880,14 @@ function initializeSwiper() {
         favorites: memories.filter(m => m.isFavorite).length,
         maxImages: MAX_IMAGES
     });
-    
+
     // For premium users, only show favorite images in slideshow (max 5)
     // For free users, show all images (max 5)
     let slideshowMemories = memories;
     if (IS_PREMIUM) {
         const favoriteMemories = memories.filter(m => m.isFavorite);
         console.log(`⭐ Found ${favoriteMemories.length} favorites:`, favoriteMemories.map(m => m.title));
-        
+
         if (favoriteMemories.length > 0) {
             slideshowMemories = favoriteMemories.slice(0, MAX_FAVORITES);
             console.log(`⭐ Premium: Showing ${slideshowMemories.length} favorite images in slideshow`);
@@ -894,18 +899,18 @@ function initializeSwiper() {
     } else {
         console.log(`👤 Free account: Showing all ${slideshowMemories.length} images`);
     }
-    
+
     // Store slideshow memories globally so we can reference them later
     window.currentSlideshowMemories = slideshowMemories;
-    
+
     console.log('🎡 Creating Ferris Wheel with', slideshowMemories.length, 'images');
-    
+
     // Create each memory slide
     slideshowMemories.forEach((memory, index) => {
         const slide = document.createElement('div');
         slide.className = 'swiper-slide';
         slide.setAttribute('data-memory-index', index);
-        
+
         const imageUrl = getImageUrl(memory.fullImage);
         slide.innerHTML = `
             <div class="slide-content">
@@ -933,13 +938,13 @@ function initializeSwiper() {
                 </div>
             </div>
         `;
-        
+
         swiperWrapper.appendChild(slide);
         debugLog(`✅ Created slide ${index + 1}: ${memory.title}`);
     });
-    
+
     console.log(`🎡 Total slides created: ${swiperWrapper.children.length}`);
-    
+
     // Initialize Swiper
     mainSwiper = new Swiper('.mainSwiper', {
         effect: 'coverflow',
@@ -1035,14 +1040,14 @@ function initializeSwiper() {
             }
         },
         on: {
-            slideChange: function() {
+            slideChange: function () {
                 // Get the real index (accounting for loop mode)
                 const realIndex = this.realIndex;
                 currentActiveSlide = realIndex;
                 updateSlideInfo(realIndex);
                 updateSlideshowCounter();
             },
-            init: function() {
+            init: function () {
                 console.log('🎡 Ferris Wheel initialized with', this.slides.length, 'total slides');
                 updateSlideshowCounter();
             }
@@ -1057,7 +1062,7 @@ function initializeSwiper() {
                 mainSwiper.autoplay.stop();
             }
         });
-        
+
         swiperContainer.addEventListener('mouseleave', () => {
             if (mainSwiper && mainSwiper.autoplay) {
                 mainSwiper.autoplay.start();
@@ -1120,9 +1125,9 @@ function addNewMemoryToSwiper(imageUrl, thumbnailUrl, title, description) {
         fullImage: imageUrl,
         thumbnail: thumbnailUrl
     };
-    
+
     memories.push(newMemory);
-    
+
     // Add new slide to main swiper
     const newSlide = `
         <div class="swiper-slide">
@@ -1135,10 +1140,10 @@ function addNewMemoryToSwiper(imageUrl, thumbnailUrl, title, description) {
             </div>
         </div>
     `;
-    
+
     // Append slide
     mainSwiper.appendSlide(newSlide);
-    
+
     // Go to the new slide
     mainSwiper.slideTo(memories.length - 1);
 }
@@ -1147,37 +1152,37 @@ function addNewMemoryToSwiper(imageUrl, thumbnailUrl, title, description) {
 function updateSwiperSlide(index, updates) {
     if (index >= 0 && index < memories.length) {
         Object.assign(memories[index], updates);
-        
+
         // CRITICAL FIX: In loop mode, find slides by data-swiper-slide-index attribute
         // This ensures we update the original slide AND all loop duplicates
         const allSlides = document.querySelectorAll('.mainSwiper .swiper-slide');
-        
+
         allSlides.forEach((slide) => {
             // Get the real index from data attribute (set by Swiper in loop mode)
             const slideDataIndex = slide.getAttribute('data-swiper-slide-index');
             const slideRealIndex = slideDataIndex !== null ? parseInt(slideDataIndex) : null;
-            
+
             // Update if this slide matches our index
             if (slideRealIndex === index) {
                 console.log(`Updating slide with data-index ${slideDataIndex} for memory ${index}`);
-                
+
                 if (updates.fullImage) {
                     const img = slide.querySelector('.slide-content img');
                     if (img) img.src = getImageUrl(updates.fullImage);
                 }
-                
+
                 if (updates.title) {
                     const title = slide.querySelector('.slide-info h3');
                     if (title) title.textContent = updates.title;
                 }
-                
+
                 if (updates.description) {
                     const desc = slide.querySelector('.slide-info p');
                     if (desc) desc.textContent = updates.description;
                 }
             }
         });
-        
+
         // Force swiper to update after changes
         if (mainSwiper) {
             mainSwiper.update();
@@ -1190,12 +1195,12 @@ function updateSwiperSlide(index, updates) {
 function removeSwiperSlide(index) {
     if (index >= 0 && index < memories.length) {
         memories.splice(index, 1);
-        
+
         // Update IDs for remaining memories
         memories.forEach((memory, i) => {
             memory.id = i;
         });
-        
+
         // Regenerate all slides with updated memories
         regenerateSlides();
     }
@@ -1204,29 +1209,29 @@ function removeSwiperSlide(index) {
 // Function to regenerate all slides (useful after adding/removing memories)
 function regenerateSlides() {
     if (!mainSwiper) return;
-    
+
     // Destroy current swiper
     mainSwiper.destroy(true, true);
-    
+
     // Re-initialize with new slides
     initializeSwiper();
-    
+
     console.log('🔄 Slides regenerated with', memories.length, 'memories');
 }
 
 // Function to rebuild gallery from loaded memories (from backend)
 function rebuildGalleryFromMemories() {
     console.log('🔨 Rebuilding gallery from', memories.length, 'memories');
-    
+
     // Update all memory image URLs to use R2 public URL if needed
     memories.forEach((memory, index) => {
         const originalFullImage = memory.fullImage;
         const originalThumbnail = memory.thumbnail;
-        
+
         // Process URLs - getImageUrl handles both full URLs and relative paths
         memory.fullImage = getImageUrl(memory.fullImage);
         memory.thumbnail = getImageUrl(memory.thumbnail || memory.fullImage);
-        
+
         // Debug logging for first few images
         if (index < 3) {
             debugLog(`🖼️ Image ${index} URL processing:`, {
@@ -1235,7 +1240,7 @@ function rebuildGalleryFromMemories() {
                 thumbnail: memory.thumbnail
             });
         }
-        
+
         // Test if image URL is accessible (optional debug)
         if (index === 0) {
             const testImg = new Image();
@@ -1245,11 +1250,11 @@ function rebuildGalleryFromMemories() {
             testImg.src = imageUrl;
         }
     });
-    
+
     // Simply reinitialize the swiper with current memories
     // initializeSwiper will handle the favorite filtering for premium users
     initializeSwiper();
-    
+
     console.log(`✅ Gallery rebuilt successfully`);
 }
 
@@ -1304,7 +1309,7 @@ function enterFullscreen() {
 function enhanceSwiper() {
     if (mainSwiper) {
         // Add custom event listeners
-        mainSwiper.on('slideChangeTransitionStart', function() {
+        mainSwiper.on('slideChangeTransitionStart', function () {
             // Add custom animations or effects here
             const activeSlide = this.slides[this.activeIndex];
             if (activeSlide) {
@@ -1314,9 +1319,9 @@ function enhanceSwiper() {
                 }, 300);
             }
         });
-        
+
         // Add keyboard shortcuts
-        document.addEventListener('keydown', function(e) {
+        document.addEventListener('keydown', function (e) {
             if (e.key === 'f' || e.key === 'F') {
                 enterFullscreen();
             } else if (e.key === ' ') {
@@ -1330,7 +1335,7 @@ function enhanceSwiper() {
                 // Ctrl+R or Cmd+R for force refresh on mobile data
                 const connection = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
                 const isMobileData = connection && connection.type && !connection.type.includes('wifi');
-                
+
                 if (isMobileData) {
                     e.preventDefault();
                     forceRefreshImages();
@@ -1345,10 +1350,10 @@ function exitEditMode() {
     isEditMode = false;
     const editOverlay = document.getElementById('editOverlay');
     const colorPalette = document.getElementById('colorPalettePanel');
-    
+
     editOverlay.classList.remove('active');
     colorPalette.classList.remove('active');
-    
+
     if (mainSwiper.autoplay) {
         mainSwiper.autoplay.start();
     }
@@ -1356,14 +1361,14 @@ function exitEditMode() {
 
 function toggleEditMode() {
     console.log(`🔄 Toggle edit mode called, current state: ${isEditMode}`);
-    
+
     // If already in edit mode, exit it
     if (isEditMode) {
         console.log('❌ Exiting edit mode');
         exitEditMode();
         return;
     }
-    
+
     // Check if passcode protection is enabled
     if (STORED_PASSCODE_HASH) {
         console.log('🔒 Passcode required, opening passcode modal');
@@ -1380,20 +1385,22 @@ function enterEditMode() {
     console.log('✅ Entering edit mode');
     isEditMode = true;
     const editOverlay = document.getElementById('editOverlay');
-    
+
     editOverlay.classList.add('active');
     document.body.classList.add('edit-mode');
     enableHeaderEditing();
-    
+
     if (mainSwiper && mainSwiper.autoplay) {
         mainSwiper.autoplay.stop();
     }
-    
+
     // Setup functions - call only once
     updateEditControls();
     populateImageGrid();
     populateGalleryTitleInput();
     setupImageUpload(); // This now properly prevents duplicate listeners
+    setupVideoUpload(); // Setup video upload for premium users
+    updateCurrentVideoArea(); // Show current video if exists
 }
 
 // Gallery Title Functions
@@ -1408,7 +1415,7 @@ function populateGalleryTitleInput() {
 function saveGalleryTitle() {
     const titleInput = document.getElementById('galleryTitleInput');
     const titleElement = document.getElementById('galleryTitle');
-    
+
     if (titleInput && titleElement) {
         const newTitle = titleInput.value.trim();
         if (newTitle) {
@@ -1425,15 +1432,15 @@ function exitEditMode() {
     isEditMode = false;
     const editOverlay = document.getElementById('editOverlay');
     const colorPalette = document.getElementById('colorPalettePanel');
-    
+
     editOverlay.classList.remove('active');
     colorPalette.classList.remove('active');
     document.body.classList.remove('edit-mode');
     disableHeaderEditing();
-    
+
     // Save all changes to backend when exiting edit mode
     saveAllChangesToBackend();
-    
+
     if (mainSwiper.autoplay) {
         mainSwiper.autoplay.start();
     }
@@ -1450,9 +1457,9 @@ async function saveAllChangesToBackend() {
     try {
         // Show saving notification
         showNotification('💾 Saving changes...', 'info');
-        
+
         console.log('� Preparing to save gallery data...');
-        
+
         // No need to compress - images are URLs from Firebase Storage
         const preparedMemories = memories.map(memory => ({
             id: memory.id || 0,
@@ -1466,7 +1473,7 @@ async function saveAllChangesToBackend() {
             tags: memory.tags || '',
             isFavorite: memory.isFavorite || false // Premium feature
         }));
-        
+
         // Prepare gallery data
         const galleryData = {
             galleryTitle: document.getElementById('galleryTitle')?.textContent || 'SmartLocket Gallery',
@@ -1482,7 +1489,7 @@ async function saveAllChangesToBackend() {
                 showWelcomeLetter: localStorage.getItem('memorychain-show-welcome-letter') !== 'false'
             }
         };
-        
+
         // Remove null values to avoid Firebase errors
         if (!galleryData.spotifyUrl) delete galleryData.spotifyUrl;
         if (!galleryData.spotifyTrack) delete galleryData.spotifyTrack;
@@ -1490,7 +1497,7 @@ async function saveAllChangesToBackend() {
         const totalSize = JSON.stringify(galleryData).length;
         const totalSizeKB = (totalSize / 1024).toFixed(2);
         const totalSizeMB = (totalSize / (1024 * 1024)).toFixed(2);
-        
+
         console.log('📤 Sending to backend:', {
             memoryId: MEMORY_ID,
             galleryTitle: galleryData.galleryTitle,
@@ -1519,14 +1526,14 @@ async function saveAllChangesToBackend() {
         const result = await response.json();
         console.log('✅ Gallery saved successfully:', result);
         showNotification('✅ All changes saved!', 'success');
-        
+
         // Save metadata only to localStorage (images are in backend)
         saveToLocalStorage();
-        
+
     } catch (error) {
         console.error('❌ Error saving gallery:', error);
         showNotification('❌ Failed to save changes. ' + error.message, 'error');
-        
+
         // Try to save metadata to localStorage (without images)
         saveToLocalStorage();
     }
@@ -1536,7 +1543,7 @@ async function saveAllChangesToBackend() {
 function getLetterContent() {
     const letterTitle = document.querySelector('.zoom-letter h2')?.textContent || 'Welcome to SmartLocket';
     const paragraphs = Array.from(document.querySelectorAll('.zoom-letter p')).map(p => p.textContent);
-    
+
     return {
         title: letterTitle,
         paragraphs: paragraphs
@@ -1559,7 +1566,7 @@ function saveToLocalStorage() {
                 showWelcomeLetter: localStorage.getItem('memorychain-show-welcome-letter') !== 'false'
             }
         };
-        
+
         localStorage.setItem('memorychain-gallery-data', JSON.stringify(galleryData));
         console.log('💾 Saved metadata to localStorage (images saved to backend only)');
     } catch (error) {
@@ -1593,7 +1600,7 @@ async function verifyPasscode(inputPasscode, storedHash) {
         hasStoredHash: !!storedHash,
         hashType: storedHash?.substring(0, 3)
     });
-    
+
     // For bcrypt hashes (starting with $2a$ or $2b$), we need to send to backend
     if (storedHash && storedHash.startsWith('$2')) {
         console.log('🔐 Using backend verification for bcrypt hash');
@@ -1607,14 +1614,14 @@ async function verifyPasscode(inputPasscode, storedHash) {
                     passcode: inputPasscode
                 })
             });
-            
+
             console.log('🔐 API response status:', response.status);
-            
+
             if (!response.ok) {
                 console.error('🔐 API response not OK:', response.status);
                 return false;
             }
-            
+
             const result = await response.json();
             console.log('🔐 API response result:', result);
             return result.valid === true;
@@ -1623,7 +1630,7 @@ async function verifyPasscode(inputPasscode, storedHash) {
             return false;
         }
     }
-    
+
     console.log('🔐 Using local SHA-256 verification');
     // For simple SHA-256 hashes (fallback for demo mode)
     const inputHash = await hashPasscode(inputPasscode);
@@ -1635,13 +1642,13 @@ function openPasscodeModal() {
     const modal = document.getElementById('passcodeModal');
     const input = document.getElementById('passcodeInput');
     const error = document.getElementById('passcodeError');
-    
+
     if (modal) {
         console.log('🔐 Passcode modal found, opening...');
         // Clear previous input and errors
         if (input) input.value = '';
         if (error) error.style.display = 'none';
-        
+
         // Show modal
         modal.style.display = 'flex';
         setTimeout(() => {
@@ -1649,7 +1656,7 @@ function openPasscodeModal() {
             if (input) input.focus();
             console.log('🔐 Passcode modal should now be visible');
         }, 10);
-        
+
         // Remove any existing Enter key listener first
         if (input) {
             input.removeEventListener('keypress', handlePasscodeEnter);
@@ -1663,13 +1670,13 @@ function openPasscodeModal() {
 function closePasscodeModal() {
     const modal = document.getElementById('passcodeModal');
     const input = document.getElementById('passcodeInput');
-    
+
     if (modal) {
         modal.classList.remove('active');
         setTimeout(() => {
             modal.style.display = 'none';
         }, 300);
-        
+
         // Remove Enter key listener
         if (input) {
             input.removeEventListener('keypress', handlePasscodeEnter);
@@ -1686,10 +1693,10 @@ function handlePasscodeEnter(event) {
 
 // Check if passcode session is still valid
 function isPasscodeSessionValid() {
-    const valid = window.passcodeSessionValid && 
-                 window.passcodeSessionExpiry && 
-                 Date.now() < window.passcodeSessionExpiry;
-    
+    const valid = window.passcodeSessionValid &&
+        window.passcodeSessionExpiry &&
+        Date.now() < window.passcodeSessionExpiry;
+
     console.log('🕐 Session check:', {
         passcodeSessionValid: window.passcodeSessionValid,
         passcodeSessionExpiry: window.passcodeSessionExpiry,
@@ -1698,7 +1705,7 @@ function isPasscodeSessionValid() {
         result: valid,
         timeRemaining: window.passcodeSessionExpiry ? Math.round((window.passcodeSessionExpiry - Date.now()) / 1000) : 'no expiry'
     });
-    
+
     return valid;
 }
 
@@ -1706,13 +1713,13 @@ async function verifyPasscodeAndEnterEditMode() {
     try {
         console.log('🔐🔐🔐 verifyPasscodeAndEnterEditMode ACTUALLY CALLED!');
         console.log('🔐 Function started - checking inputs...');
-        
+
         const input = document.getElementById('passcodeInput');
         const error = document.getElementById('passcodeError');
         const passcode = input?.value?.trim();
-        
+
         console.log('🔐 Got input elements:', { input: !!input, error: !!error, passcode: passcode });
-        
+
         // Simple validation
         if (!passcode || passcode.length !== 6) {
             console.log('❌ Invalid passcode length:', passcode?.length);
@@ -1722,24 +1729,24 @@ async function verifyPasscodeAndEnterEditMode() {
             }
             return;
         }
-        
+
         console.log('✅ About to verify passcode...');
-        
+
         // Simple password check - if password matches, grant access
         const isValid = await verifyPasscode(passcode, STORED_PASSCODE_HASH);
-        
+
         console.log('🔐 Passcode verification result:', isValid);
-        
+
         if (isValid) {
             console.log('✅ Password correct - granting access');
-            
+
             // Set temporary session bypass for 5 minutes
             window.passcodeSessionValid = true;
             window.passcodeSessionExpiry = Date.now() + (5 * 60 * 1000); // 5 minutes
-            
+
             // Close the passcode modal
             closePasscodeModal();
-            
+
             // Check what the user wanted to do
             if (window.pendingSpotifyAction === 'open') {
                 console.log('🎵 Opening Spotify modal');
@@ -1753,7 +1760,7 @@ async function verifyPasscodeAndEnterEditMode() {
                 console.log('🔐 Entering edit mode');
                 enterEditMode();
             }
-            
+
             showNotification('🔓 Access granted!', 'success');
         } else {
             console.log('❌ Wrong password');
@@ -1782,7 +1789,7 @@ let resetToken = null;
 
 function openForgotPasscodeModal() {
     closePasscodeModal(); // Close the main passcode modal
-    
+
     const modal = document.getElementById('forgotPasscodeModal');
     if (modal) {
         // Reset to step 1
@@ -1792,18 +1799,18 @@ function openForgotPasscodeModal() {
         document.getElementById('forgotFooter1').classList.add('active');
         document.getElementById('forgotFooter2').classList.remove('active');
         document.getElementById('forgotFooter3').classList.remove('active');
-        
+
         // Clear inputs
         document.getElementById('resetMemoryId').value = MEMORY_ID || '';
         document.getElementById('resetEmail').value = '';
         document.getElementById('verificationCode').value = '';
         document.getElementById('newPasscode').value = '';
         document.getElementById('confirmNewPasscode').value = '';
-        
+
         // Clear errors
         document.getElementById('forgotStep1Error').style.display = 'none';
         document.getElementById('forgotStep2Error').style.display = 'none';
-        
+
         // Show modal
         modal.style.display = 'flex';
         setTimeout(() => modal.classList.add('active'), 10);
@@ -1833,53 +1840,53 @@ async function sendResetCode() {
     const memoryId = document.getElementById('resetMemoryId').value.trim().toUpperCase();
     const email = document.getElementById('resetEmail').value.trim();
     const errorDiv = document.getElementById('forgotStep1Error');
-    
+
     // Validation
     if (!memoryId) {
         errorDiv.textContent = '❌ Please enter your Memory ID';
         errorDiv.style.display = 'block';
         return;
     }
-    
+
     if (!email) {
         errorDiv.textContent = '❌ Please enter your email address';
         errorDiv.style.display = 'block';
         return;
     }
-    
+
     if (!email.includes('@')) {
         errorDiv.textContent = '❌ Please enter a valid email address';
         errorDiv.style.display = 'block';
         return;
     }
-    
+
     try {
         errorDiv.style.display = 'none';
-        
+
         // Show loading
         showNotification('📧 Sending verification code...', 'info');
-        
+
         // Send request to backend
         const response = await fetch(`${API_BASE_URL}/api/memory/request-reset`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ memoryId, email })
         });
-        
+
         const result = await response.json();
-        
+
         if (response.ok && result.success) {
             // Store token for later verification
             resetToken = result.token;
-            
+
             showNotification('✅ Verification code sent to your email!', 'success');
-            
+
             // Move to step 2
             document.getElementById('forgotStep1').style.display = 'none';
             document.getElementById('forgotStep2').style.display = 'block';
             document.getElementById('forgotFooter1').classList.remove('active');
             document.getElementById('forgotFooter2').classList.add('active');
-            
+
             // Focus on verification code input
             setTimeout(() => document.getElementById('verificationCode').focus(), 100);
         } else {
@@ -1899,44 +1906,44 @@ async function resetPasscode() {
     const confirmPasscode = document.getElementById('confirmNewPasscode').value.trim();
     const memoryId = document.getElementById('resetMemoryId').value.trim().toUpperCase();
     const errorDiv = document.getElementById('forgotStep2Error');
-    
+
     // Validation
     if (!code) {
         errorDiv.textContent = '❌ Please enter the verification code';
         errorDiv.style.display = 'block';
         return;
     }
-    
+
     if (code.length !== 6 || !/^\d{6}$/.test(code)) {
         errorDiv.textContent = '❌ Verification code must be 6 digits';
         errorDiv.style.display = 'block';
         return;
     }
-    
+
     if (!newPasscode) {
         errorDiv.textContent = '❌ Please enter a new passcode';
         errorDiv.style.display = 'block';
         return;
     }
-    
+
     if (newPasscode.length !== 6 || !/^\d{6}$/.test(newPasscode)) {
         errorDiv.textContent = '❌ Passcode must be 6 digits';
         errorDiv.style.display = 'block';
         return;
     }
-    
+
     if (newPasscode !== confirmPasscode) {
         errorDiv.textContent = '❌ Passcodes do not match';
         errorDiv.style.display = 'block';
         return;
     }
-    
+
     try {
         errorDiv.style.display = 'none';
-        
+
         // Show loading
         showNotification('🔄 Resetting passcode...', 'info');
-        
+
         // Send request to backend
         const response = await fetch(`${API_BASE_URL}/api/memory/reset-passcode`, {
             method: 'POST',
@@ -1948,15 +1955,15 @@ async function resetPasscode() {
                 token: resetToken
             })
         });
-        
+
         const result = await response.json();
-        
+
         if (response.ok && result.success) {
             showNotification('✅ Passcode reset successfully!', 'success');
-            
+
             // Update stored passcode hash
             STORED_PASSCODE_HASH = result.passcodeHash;
-            
+
             // Move to success step
             document.getElementById('forgotStep2').style.display = 'none';
             document.getElementById('forgotStep3').style.display = 'block';
@@ -1987,7 +1994,7 @@ window.resetPasscode = resetPasscode;
 // Load letter content from backend (Firebase) with localStorage fallback
 async function loadLetterContent() {
     const memoryId = getMemoryIdFromURL();
-    
+
     // Try to load from backend first
     if (memoryId) {
         try {
@@ -1995,18 +2002,18 @@ async function loadLetterContent() {
             if (response.ok) {
                 const data = await response.json();
                 const letterContent = data.letterContent;
-                
+
                 if (letterContent) {
                     console.log('📝 Loading letter content from backend for', memoryId);
-                    
+
                     const letterTitle = document.querySelector('.zoom-letter h2');
                     const paragraphs = document.querySelectorAll('.zoom-letter p');
-                    
+
                     if (letterTitle) letterTitle.textContent = letterContent.title || 'Welcome to SmartLocket';
                     if (paragraphs[0]) paragraphs[0].textContent = letterContent.paragraphs?.[0] || '';
                     if (paragraphs[1]) paragraphs[1].textContent = letterContent.paragraphs?.[1] || '';
                     if (paragraphs[2]) paragraphs[2].textContent = letterContent.paragraphs?.[2] || '';
-                    
+
                     return; // Successfully loaded from backend
                 }
             }
@@ -2014,17 +2021,17 @@ async function loadLetterContent() {
             console.warn('⚠️ Failed to load letter content from backend:', error.message);
         }
     }
-    
+
     // Fallback: Load from memory-specific localStorage (only for demo mode)
     const memoryPrefix = memoryId ? `memorychain-${memoryId}-letter` : 'memorychain-letter';
     const savedTitle = localStorage.getItem(`${memoryPrefix}-title`);
     const savedPara1 = localStorage.getItem(`${memoryPrefix}-para1`);
     const savedPara2 = localStorage.getItem(`${memoryPrefix}-para2`);
     const savedPara3 = localStorage.getItem(`${memoryPrefix}-para3`);
-    
+
     const letterTitle = document.querySelector('.zoom-letter h2');
     const paragraphs = document.querySelectorAll('.zoom-letter p');
-    
+
     if (savedTitle && letterTitle) {
         letterTitle.textContent = savedTitle;
     }
@@ -2044,13 +2051,13 @@ function openLetterEditModal() {
     const modal = document.getElementById('letterEditModal');
     const letterTitle = document.querySelector('.zoom-letter h2');
     const paragraphs = document.querySelectorAll('.zoom-letter p');
-    
+
     // Populate modal with current content
     document.getElementById('letterTitle').value = letterTitle ? letterTitle.textContent : 'Welcome to SmartLocket';
     document.getElementById('letterPara1').value = paragraphs[0] ? paragraphs[0].textContent.trim() : '';
     document.getElementById('letterPara2').value = paragraphs[1] ? paragraphs[1].textContent.trim() : '';
     document.getElementById('letterPara3').value = paragraphs[2] ? paragraphs[2].textContent.trim() : '';
-    
+
     if (modal) {
         modal.classList.add('active');
         document.body.style.overflow = 'hidden';
@@ -2072,34 +2079,34 @@ async function saveLetterContent() {
     const para1 = document.getElementById('letterPara1').value;
     const para2 = document.getElementById('letterPara2').value;
     const para3 = document.getElementById('letterPara3').value;
-    
+
     // Validate inputs
     if (!title.trim()) {
         showNotification('❌ Please enter a letter title', 'error');
         return;
     }
-    
+
     const memoryId = getMemoryIdFromURL();
     const letterContent = {
         title: title.trim(),
         paragraphs: [para1, para2, para3]
     };
-    
+
     // Save to backend (Firebase) first
     if (memoryId) {
         try {
             showNotification('💾 Saving letter...', 'info');
-            
+
             const response = await fetch(`${API_BASE_URL}/api/memory/${memoryId}`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ letterContent })
             });
-            
+
             if (!response.ok) {
                 throw new Error(`Failed to save: ${response.status}`);
             }
-            
+
             console.log('✅ Letter content saved to backend for', memoryId);
         } catch (error) {
             console.error('❌ Failed to save letter to backend:', error);
@@ -2107,18 +2114,18 @@ async function saveLetterContent() {
             return;
         }
     }
-    
+
     // Save to memory-specific localStorage as backup (only for demo mode)
     const memoryPrefix = memoryId ? `memorychain-${memoryId}-letter` : 'memorychain-letter';
     localStorage.setItem(`${memoryPrefix}-title`, title);
     localStorage.setItem(`${memoryPrefix}-para1`, para1);
     localStorage.setItem(`${memoryPrefix}-para2`, para2);
     localStorage.setItem(`${memoryPrefix}-para3`, para3);
-    
+
     // Update the actual letter content in DOM
     const letterTitle = document.querySelector('.zoom-letter h2');
     const paragraphs = document.querySelectorAll('.zoom-letter p');
-    
+
     if (letterTitle) {
         letterTitle.textContent = title;
     }
@@ -2131,27 +2138,27 @@ async function saveLetterContent() {
     if (paragraphs[2]) {
         paragraphs[2].textContent = para3;
     }
-    
+
     // Show success message using your notification system
     showNotification('Letter content saved successfully!', 'success');
-    
+
     // Close modal
     closeLetterEditModal();
 }
 
 // Initialize welcome letter checkbox
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', function () {
     const checkbox = document.getElementById('showWelcomeLetterCheckbox');
-    
+
     // Load saved preference
     const showWelcomeLetter = localStorage.getItem('memorychain-show-welcome-letter');
     if (checkbox) {
         checkbox.checked = showWelcomeLetter !== 'false';
-        
+
         // Save preference when changed
-        checkbox.addEventListener('change', function() {
+        checkbox.addEventListener('change', function () {
             localStorage.setItem('memorychain-show-welcome-letter', this.checked.toString());
-            
+
             // Show message to user using notification system
             if (this.checked) {
                 showNotification('Welcome letter animation will be shown on next page load', 'success');
@@ -2170,33 +2177,181 @@ window.saveLetterContent = saveLetterContent;
 function updateEditControls() {
     updateImageCounter();
     updateUploadZone();
+    updateVideoUploadArea();
 }
 
 function updateImageCounter() {
     const counter = document.getElementById('imageCount');
     const maxCounter = document.getElementById('maxImageCount');
-    
+
     if (counter) {
         counter.textContent = memories.length;
     }
-    
+
     // Update the max count display based on premium status
     if (maxCounter) {
         const maxCount = IS_PREMIUM ? MAX_IMAGES_PREMIUM : MAX_IMAGES_FREE;
         maxCounter.textContent = maxCount;
     }
-    
+
     // Log for debugging
     if (counter || maxCounter) {
         console.log(`📊 Counter updated: ${memories.length}/${IS_PREMIUM ? MAX_IMAGES_PREMIUM : MAX_IMAGES_FREE} images (Premium: ${IS_PREMIUM})`);
     }
 }
 
+// ========================================
+// VIDEO SECTION LOGIC (PREMIUM FEATURE)
+// ========================================
+
+function updateVideoSection() {
+    const isPremium = IS_PREMIUM;
+    const videoSection = document.getElementById('galleryVideoSection');
+    const videoEl = document.getElementById('galleryVideo');
+    
+    console.log('🎥 updateVideoSection called:', {
+        isPremium,
+        videoUrl: window.currentGalleryVideoUrl,
+        videoSectionExists: !!videoSection,
+        videoElExists: !!videoEl
+    });
+    
+    if (!videoSection || !videoEl) {
+        console.warn('⚠️ Video section or video element not found in DOM');
+        return;
+    }
+
+    const videoUrl = window.currentGalleryVideoUrl || null;
+    if (isPremium && videoUrl) {
+        console.log('✅ Showing video section with URL:', videoUrl);
+        videoSection.style.display = 'block';
+        videoEl.src = videoUrl;
+        videoEl.style.display = 'block';
+        videoEl.load(); // Force reload the video
+    } else {
+        console.log('❌ Hiding video section (Premium:', isPremium, ', URL:', videoUrl, ')');
+        videoSection.style.display = 'none';
+        videoEl.style.display = 'none';
+    }
+}
+
+function updateVideoUploadArea() {
+    const isPremium = IS_PREMIUM;
+    const videoUploadArea = document.getElementById('videoUploadArea');
+    if (videoUploadArea) videoUploadArea.style.display = isPremium ? '' : 'none';
+}
+
+function setupVideoUpload() {
+    const isPremium = IS_PREMIUM;
+    const videoUploadArea = document.getElementById('videoUploadArea');
+    if (videoUploadArea) videoUploadArea.style.display = isPremium ? '' : 'none';
+
+    const videoInput = document.getElementById('videoUploadInput');
+    if (!videoInput) return;
+
+    videoInput.onchange = async function(e) {
+        const file = e.target.files[0];
+        if (!file) return;
+        if (file.type !== 'video/mp4') {
+            showNotification('Only MP4 videos are allowed.', 'error');
+            return;
+        }
+        if (file.size > 30 * 1024 * 1024) {
+            showNotification('Video is too large (max 30MB).', 'error');
+            return;
+        }
+
+        showNotification('⏳ Uploading video...', 'info');
+
+        const reader = new FileReader();
+        reader.onload = async function(ev) {
+            const base64 = ev.target.result;
+            try {
+                const memoryId = getMemoryIdFromURL();
+                const res = await fetch(`${API_BASE_URL}/api/upload-video`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        memoryId,
+                        videoData: base64,
+                        fileName: file.name,
+                        isPremium: IS_PREMIUM
+                    })
+                });
+                const data = await res.json();
+                if (data.success && data.url) {
+                    window.currentGalleryVideoUrl = data.url;
+                    showNotification('✅ Video uploaded!', 'success');
+                    updateCurrentVideoArea();
+                    updateVideoSection();
+                } else {
+                    showNotification(data.message || 'Video upload failed.', 'error');
+                }
+            } catch (err) {
+                showNotification('Video upload failed.', 'error');
+            }
+        };
+        reader.readAsDataURL(file);
+    };
+}
+
+function updateCurrentVideoArea() {
+    const area = document.getElementById('currentVideoArea');
+    const video = document.getElementById('currentVideoPreview');
+    if (!area || !video) return;
+    if (window.currentGalleryVideoUrl) {
+        area.style.display = '';
+        video.src = window.currentGalleryVideoUrl;
+    } else {
+        area.style.display = 'none';
+        video.src = '';
+    }
+}
+
+async function deleteCurrentVideo() {
+    if (!window.currentGalleryVideoUrl) return;
+    if (!confirm('Delete this video?')) return;
+    try {
+        showNotification('⏳ Deleting video...', 'info');
+        const memoryId = getMemoryIdFromURL();
+        const res = await fetch(`${API_BASE_URL}/api/delete-video`, {
+            method: 'DELETE',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                memoryId,
+                videoUrl: window.currentGalleryVideoUrl,
+                isPremium: IS_PREMIUM
+            })
+        });
+        const data = await res.json();
+        if (data.success) {
+            window.currentGalleryVideoUrl = null;
+            showNotification('✅ Video deleted.', 'success');
+            updateCurrentVideoArea();
+            updateVideoSection();
+        } else {
+            showNotification(data.message || 'Delete failed.', 'error');
+        }
+    } catch (err) {
+        showNotification('Delete failed.', 'error');
+    }
+}
+
+// Make video functions globally available
+window.setupVideoUpload = setupVideoUpload;
+window.updateVideoSection = updateVideoSection;
+window.updateCurrentVideoArea = updateCurrentVideoArea;
+window.deleteCurrentVideo = deleteCurrentVideo;
+
+// ========================================
+// END VIDEO SECTION LOGIC
+// ========================================
+
 function updateUploadZone() {
     const uploadZone = document.querySelector('.upload-zone');
     const h4 = uploadZone.querySelector('h4');
     const input = document.getElementById('imageUploadInput');
-    
+
     if (memories.length >= MAX_IMAGES) {
         uploadZone.style.opacity = '0.5';
         uploadZone.style.cursor = 'not-allowed';
@@ -2208,7 +2363,7 @@ function updateUploadZone() {
         h4.textContent = 'Drop images here or click to upload';
         input.disabled = false;
     }
-    
+
     // Log for debugging
     console.log(`📦 Upload zone updated: ${memories.length}/${MAX_IMAGES} images (Premium: ${IS_PREMIUM})`);
 }
@@ -2219,79 +2374,79 @@ let isFileDialogOpen = false;
 function setupImageUpload() {
     const uploadZone = document.querySelector('.upload-zone');
     const fileInput = document.getElementById('imageUploadInput');
-    
+
     if (!uploadZone || !fileInput) {
         console.error('❌ Upload zone or file input not found');
         return;
     }
-    
+
     console.log('🔧 Setting up image upload...');
-    
+
     // Remove existing event listeners to prevent duplicates
     const newUploadZone = uploadZone.cloneNode(true);
     uploadZone.parentNode.replaceChild(newUploadZone, uploadZone);
-    
+
     const newFileInput = fileInput.cloneNode(true);
     fileInput.parentNode.replaceChild(newFileInput, fileInput);
-    
+
     // Add event listeners to the new elements
     newUploadZone.addEventListener('click', (e) => {
         e.preventDefault();
         e.stopPropagation();
-        
+
         console.log(`🎯 Upload zone clicked, dialog open: ${isFileDialogOpen}, memories: ${memories.length}/${MAX_IMAGES}`);
-        
+
         if (isFileDialogOpen) {
             console.log('⚠️ File dialog already open, ignoring click');
             return;
         }
-        
+
         if (memories.length >= MAX_IMAGES) {
             showNotification('❌ Maximum images reached!', 'error');
             return;
         }
-        
+
         isFileDialogOpen = true;
         console.log('📂 Opening file dialog...');
         newFileInput.click();
-        
+
         // Reset flag after a short delay
         setTimeout(() => {
             isFileDialogOpen = false;
             console.log('🔓 File dialog flag reset');
         }, 500);
     });
-    
+
     // File input change - only trigger once
     newFileInput.addEventListener('change', (e) => {
         e.preventDefault();
         e.stopPropagation();
-        
+
         console.log('📁 File input changed, files:', e.target.files?.length || 0);
-        
+
         if (e.target.files && e.target.files.length > 0) {
             handleFileUpload(e.target.files);
             // Clear the input to allow selecting the same file again if needed
             e.target.value = '';
         }
-        
+
         // Reset the dialog flag
         isFileDialogOpen = false;
     });
-    
+
     // Also reset flag if user cancels file dialog
     newFileInput.addEventListener('cancel', () => {
         console.log('❌ File dialog cancelled');
         isFileDialogOpen = false;
     });
-    
+
     // Handle focus events (when file dialog closes)
     window.addEventListener('focus', () => {
         setTimeout(() => {
             isFileDialogOpen = false;
         }, 100);
     });
-    
+
     // Drag and drop
     newUploadZone.addEventListener('dragover', (e) => {
         e.preventDefault();
@@ -2300,27 +2455,27 @@ function setupImageUpload() {
             newUploadZone.classList.add('dragover');
         }
     });
-    
+
     newUploadZone.addEventListener('dragleave', (e) => {
         e.preventDefault();
         e.stopPropagation();
         newUploadZone.classList.remove('dragover');
     });
-    
+
     newUploadZone.addEventListener('drop', (e) => {
         e.preventDefault();
         e.stopPropagation();
         newUploadZone.classList.remove('dragover');
-        
+
         console.log('📁 Files dropped:', e.dataTransfer.files?.length || 0);
-        
+
         if (memories.length < MAX_IMAGES) {
             handleFileUpload(e.dataTransfer.files);
         } else {
             showNotification('❌ Maximum images reached!', 'error');
         }
     });
-    
+
     console.log('✅ Image upload setup complete');
 }
 
@@ -2328,26 +2483,26 @@ function setupImageUpload() {
 function compressImage(base64Data, maxSizeKB = 70) {
     return new Promise((resolve) => {
         const img = new Image();
-        img.onload = function() {
+        img.onload = function () {
             const canvas = document.createElement('canvas');
             let width = img.width;
             let height = img.height;
-            
+
             // Detect mobile data connection and adjust compression accordingly
             const connection = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
             const isSlowConnection = connection && (connection.effectiveType === 'slow-2g' || connection.effectiveType === '2g');
             const isMobileData = connection && connection.type && !connection.type.includes('wifi');
-            
+
             // Adjust compression based on connection
             let maxDimension = 800;
             let targetSize = maxSizeKB;
-            
+
             if (isSlowConnection || isMobileData) {
                 maxDimension = 600; // Smaller images for mobile data
                 targetSize = Math.min(maxSizeKB, 50); // Maximum 50KB for mobile data
                 console.log(`📱 Mobile data detected, using aggressive compression: ${maxDimension}px, ${targetSize}KB`);
             }
-            
+
             // Calculate new dimensions
             if (width > height && width > maxDimension) {
                 height = (height * maxDimension) / width;
@@ -2356,56 +2511,56 @@ function compressImage(base64Data, maxSizeKB = 70) {
                 width = (width * maxDimension) / height;
                 height = maxDimension;
             }
-            
+
             canvas.width = width;
             canvas.height = height;
-            
+
             const ctx = canvas.getContext('2d');
-            
+
             // Enable image smoothing for better quality
             ctx.imageSmoothingEnabled = true;
             ctx.imageSmoothingQuality = 'high';
-            
+
             ctx.drawImage(img, 0, 0, width, height);
-            
+
             // Start with lower quality for maximum compression
             let quality = isSlowConnection || isMobileData ? 0.4 : 0.6;
-            
+
             let compressedData = canvas.toDataURL('image/jpeg', quality);
-            
+
             // Reduce quality until size is acceptable
             while (compressedData.length > targetSize * 1024 && quality > 0.1) {
                 quality -= 0.05;
                 compressedData = canvas.toDataURL('image/jpeg', quality);
             }
-            
+
             // If still too large, reduce dimensions further for mobile data
             if (compressedData.length > targetSize * 1024 && (isSlowConnection || isMobileData)) {
                 const newWidth = Math.floor(width * 0.8);
                 const newHeight = Math.floor(height * 0.8);
-                
+
                 canvas.width = newWidth;
                 canvas.height = newHeight;
                 ctx.drawImage(img, 0, 0, newWidth, newHeight);
-                
+
                 compressedData = canvas.toDataURL('image/jpeg', quality);
                 console.log(`📱 Further reduced dimensions for mobile: ${newWidth}x${newHeight}`);
             }
-            
+
             const originalSizeKB = (base64Data.length / 1024).toFixed(2);
             const compressedSizeKB = (compressedData.length / 1024).toFixed(2);
             const compressionRatio = ((1 - compressedData.length / base64Data.length) * 100).toFixed(1);
-            
+
             console.log(`📦 Compressed: ${originalSizeKB}KB → ${compressedSizeKB}KB (${compressionRatio}% reduction, ${quality.toFixed(2)} quality)`);
-            
+
             resolve(compressedData);
         };
-        
-        img.onerror = function() {
+
+        img.onerror = function () {
             console.error('Failed to load image for compression');
             resolve(base64Data); // Return original if compression fails
         };
-        
+
         img.src = base64Data;
     });
 }
@@ -2414,17 +2569,17 @@ function compressImage(base64Data, maxSizeKB = 70) {
 async function uploadImageWithRetry(imageData, memoryId, fileName, maxRetries = 3) {
     const connection = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
     const isSlowConnection = connection && (connection.effectiveType === 'slow-2g' || connection.effectiveType === '2g');
-    
+
     // Adjust timeout based on connection type
     const timeout = isSlowConnection ? 60000 : 30000; // 60s for slow connections, 30s for others
-    
+
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
         try {
             console.log(`📤 Upload attempt ${attempt}/${maxRetries} for ${fileName}`);
-            
+
             const controller = new AbortController();
             const timeoutId = setTimeout(() => controller.abort(), timeout);
-            
+
             const response = await fetch(`${API_BASE_URL}/api/upload-image`, {
                 method: 'POST',
                 headers: {
@@ -2437,21 +2592,21 @@ async function uploadImageWithRetry(imageData, memoryId, fileName, maxRetries = 
                 }),
                 signal: controller.signal
             });
-            
+
             clearTimeout(timeoutId);
-            
+
             if (!response.ok) {
                 const errorData = await response.json().catch(() => ({}));
                 const errorMessage = errorData.message || response.statusText;
                 throw new Error(`HTTP ${response.status}: ${errorMessage}`);
             }
-            
+
             const result = await response.json();
-            
+
             if (!result.success) {
                 // Check if it's a file type validation error (don't retry these)
                 if (result.message && (
-                    result.message.includes('not supported') || 
+                    result.message.includes('not supported') ||
                     result.message.includes('Only image files') ||
                     result.message.includes('Video and audio files')
                 )) {
@@ -2460,22 +2615,22 @@ async function uploadImageWithRetry(imageData, memoryId, fileName, maxRetries = 
                 }
                 throw new Error(result.message || 'Upload failed');
             }
-            
+
             console.log(`✅ Upload successful on attempt ${attempt}: ${result.url}`);
             return result;
-            
+
         } catch (error) {
             console.error(`❌ Upload attempt ${attempt} failed:`, error.message);
-            
+
             // Don't retry file type validation errors
             if (error.message.startsWith('FILE_TYPE_ERROR:')) {
                 throw new Error(error.message.replace('FILE_TYPE_ERROR: ', ''));
             }
-            
+
             if (attempt === maxRetries) {
                 throw new Error(`Upload failed after ${maxRetries} attempts: ${error.message}`);
             }
-            
+
             // Exponential backoff with jitter for mobile connections
             const delay = Math.min(1000 * Math.pow(2, attempt - 1), 10000) + Math.random() * 1000;
             console.log(`⏳ Retrying in ${Math.round(delay)}ms...`);
@@ -2486,30 +2641,30 @@ async function uploadImageWithRetry(imageData, memoryId, fileName, maxRetries = 
 
 function handleFileUpload(files) {
     if (!files || files.length === 0) return;
-    
+
     // 🚫 STRICT FILE TYPE VALIDATION - Images Only
     const validFiles = [];
     const rejectedFiles = [];
     const allowedTypes = [
         'image/jpeg',
-        'image/jpg', 
+        'image/jpg',
         'image/png',
         'image/gif',
         'image/webp',
         'image/bmp',
         'image/svg+xml'
     ];
-    
+
     // Check each file type strictly
     Array.from(files).forEach(file => {
         console.log(`🔍 Checking file: ${file.name}, Type: ${file.type}, Size: ${(file.size / 1024 / 1024).toFixed(2)}MB`);
-        
+
         // Reject videos, audio, and non-image files
-        if (file.type.startsWith('video/') || file.type.startsWith('audio/') || 
-            file.type.includes('mp4') || file.type.includes('mov') || 
+        if (file.type.startsWith('video/') || file.type.startsWith('audio/') ||
+            file.type.includes('mp4') || file.type.includes('mov') ||
             file.type.includes('avi') || file.type.includes('mp3') ||
             file.type.includes('wav') || file.type.includes('m4a')) {
-            
+
             rejectedFiles.push({
                 name: file.name,
                 type: file.type,
@@ -2517,13 +2672,13 @@ function handleFileUpload(files) {
             });
             return;
         }
-        
+
         // Check if it's a valid image type
         if (!allowedTypes.includes(file.type.toLowerCase())) {
             // Additional check for files without proper MIME type
             const extension = file.name.toLowerCase().split('.').pop();
             const imageExtensions = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp', 'svg'];
-            
+
             if (!imageExtensions.includes(extension)) {
                 rejectedFiles.push({
                     name: file.name,
@@ -2533,7 +2688,7 @@ function handleFileUpload(files) {
                 return;
             }
         }
-        
+
         // Check file size (limit to 10MB per image)
         if (file.size > 10 * 1024 * 1024) {
             rejectedFiles.push({
@@ -2543,85 +2698,85 @@ function handleFileUpload(files) {
             });
             return;
         }
-        
+
         validFiles.push(file);
     });
-    
+
     // Show rejected files notification
     if (rejectedFiles.length > 0) {
         const rejectedNames = rejectedFiles.map(f => `${f.name} (${f.reason})`).join('\n• ');
         showNotification(`❌ Rejected ${rejectedFiles.length} file(s):\n• ${rejectedNames}`, 'error', 6000);
         console.warn('🚫 Rejected files:', rejectedFiles);
     }
-    
+
     if (validFiles.length === 0) {
         showNotification('❌ No valid image files to upload!', 'error');
         return;
     }
-    
+
     const remainingSlots = MAX_IMAGES - memories.length;
     const filesToProcess = Math.min(validFiles.length, remainingSlots);
-    
+
     if (filesToProcess === 0) {
         showNotification('❌ Maximum images reached!', 'error');
         return;
     }
-    
+
     console.log(`📸 Processing ${filesToProcess} valid image files...`);
     showNotification(`📤 Uploading ${filesToProcess} image${filesToProcess > 1 ? 's' : ''}...`, 'info');
-    
+
     let processedCount = 0;
-    
+
     // Process each valid file - upload to Cloudflare R2
     for (let i = 0; i < filesToProcess; i++) {
         const file = validFiles[i];
         if (file) {
             const reader = new FileReader();
-            
-            reader.onload = async function(e) {
+
+            reader.onload = async function (e) {
                 const imageData = e.target.result;
-                
+
                 try {
                     // Compress image based on connection quality
                     const compressedData = await compressImage(imageData);
                     console.log(`📤 Uploading ${file.name} to Cloudflare R2...`);
-                    
+
                     // Use retry logic for mobile data connections
                     const result = await uploadImageWithRetry(compressedData, MEMORY_ID, file.name);
-                    
+
                     const imageUrl = result.url;
-                    
-            console.log(`✅ Image uploaded to Cloudflare R2: ${imageUrl}`);
-            
-            // Create new memory object with URL instead of base64
-            const newMemory = {
-                id: memories.length,
-                title: `Memory #${memories.length + 1}`,
-                description: 'Add a description for this memory...',
-                fullImage: imageUrl,  // Store URL, not base64
-                thumbnail: imageUrl,  // Store URL, not base64
-                fileName: result.fileName, // Store for deletion
-                date: new Date().toISOString().split('T')[0],
-                location: '',
-                tags: '',
-                isFavorite: false
-            };
-            
-            memories.push(newMemory);
-            processedCount++;
-            
-            debugLog(`✅ Processed ${processedCount}/${filesToProcess}: ${file.name}`);                    // When all files are processed
+
+                    console.log(`✅ Image uploaded to Cloudflare R2: ${imageUrl}`);
+
+                    // Create new memory object with URL instead of base64
+                    const newMemory = {
+                        id: memories.length,
+                        title: `Memory #${memories.length + 1}`,
+                        description: 'Add a description for this memory...',
+                        fullImage: imageUrl,  // Store URL, not base64
+                        thumbnail: imageUrl,  // Store URL, not base64
+                        fileName: result.fileName, // Store for deletion
+                        date: new Date().toISOString().split('T')[0],
+                        location: '',
+                        tags: '',
+                        isFavorite: false
+                    };
+
+                    memories.push(newMemory);
+                    processedCount++;
+
+                    debugLog(`✅ Processed ${processedCount}/${filesToProcess}: ${file.name}`);                    // When all files are processed
                     if (processedCount === filesToProcess) {
                         // Rebuild gallery
                         if (mainSwiper) {
                             mainSwiper.destroy(true, true);
                         }
                         initializeSwiper();
-                        
+
                         // Update UI
                         updateEditControls();
                         populateImageGrid();
-                        
+
                         showNotification(`✅ ${filesToProcess} image${filesToProcess > 1 ? 's' : ''} uploaded successfully!`, 'success');
                     }
                 } catch (error) {
@@ -2630,19 +2785,19 @@ function handleFileUpload(files) {
                     processedCount++;
                 }
             };
-            
-            reader.onerror = function() {
+
+            reader.onerror = function () {
                 console.error('❌ Error reading file:', file.name);
                 showNotification('❌ Error reading image file', 'error');
                 processedCount++;
             };
-            
+
             reader.readAsDataURL(file);
         } else {
             console.log(`⚠️ Skipping non-image file:`, file?.name);
         }
     }
-    
+
     if (filesToProcess < files.length) {
         showNotification(`⚠️ Only ${filesToProcess} images were added. Maximum ${MAX_IMAGES} images allowed.`, 'warning');
     }
@@ -2654,76 +2809,76 @@ function populateImageGrid() {
         console.error('❌ Image grid not found');
         return;
     }
-    
+
     console.log(`🖼️ Populating image grid with ${memories.length} images`);
-    
+
     // Clear existing grid completely
     imageGrid.innerHTML = '';
-    
+
     // Create fresh elements for each memory
     memories.forEach((memory, index) => {
         const imageItem = document.createElement('div');
         imageItem.className = 'image-item';
         imageItem.dataset.index = index; // Add data attribute for reference
-        
+
         if (index === currentActiveSlide) {
             imageItem.classList.add('current');
         }
-        
+
         // Add favorite class if it's a favorite
         if (memory.isFavorite) {
             imageItem.classList.add('favorite');
         }
-        
+
         // Create inner HTML with favorite button for premium users
-        const favoriteButton = IS_PREMIUM 
+        const favoriteButton = IS_PREMIUM
             ? `<button class="favorite-btn" type="button" title="${memory.isFavorite ? 'Remove from favorites' : 'Add to favorites'}">${memory.isFavorite ? '⭐' : '☆'}</button>`
             : '';
-        
+
         imageItem.innerHTML = `
             <img src="${getImageUrl(memory.thumbnail || memory.fullImage)}" alt="${memory.title}" draggable="false">
             ${favoriteButton}
             <button class="edit-icon" type="button" title="Edit details">✎</button>
             <button class="delete-btn" type="button" title="Delete image">×</button>
         `;
-        
+
         // Get elements for event listeners
         const favoriteBtn = imageItem.querySelector('.favorite-btn');
         const editBtn = imageItem.querySelector('.edit-icon');
         const deleteBtn = imageItem.querySelector('.delete-btn');
         const img = imageItem.querySelector('img');
-        
+
         // Add favorite button handler for premium users
         if (favoriteBtn && IS_PREMIUM) {
-            favoriteBtn.addEventListener('click', function(e) {
+            favoriteBtn.addEventListener('click', function (e) {
                 e.preventDefault();
                 e.stopPropagation();
                 console.log(`⭐ Favorite button clicked for index ${index}`);
                 toggleFavorite(index);
             }, { once: false });
         }
-        
+
         // Add single event listeners with proper event handling
         if (editBtn) {
-            editBtn.addEventListener('click', function(e) {
+            editBtn.addEventListener('click', function (e) {
                 e.preventDefault();
                 e.stopPropagation();
                 console.log(`✏️ Edit button clicked for index ${index}`);
                 openImageEditModal(index);
             }, { once: false }); // Allow multiple clicks but prevent bubbling
         }
-        
+
         if (deleteBtn) {
-            deleteBtn.addEventListener('click', function(e) {
+            deleteBtn.addEventListener('click', function (e) {
                 e.preventDefault();
                 e.stopPropagation();
                 console.log(`🗑️ Delete button clicked for index ${index}`);
                 deleteImage(index);
             }, { once: false });
         }
-        
+
         if (img) {
-            img.addEventListener('click', function(e) {
+            img.addEventListener('click', function (e) {
                 e.preventDefault();
                 e.stopPropagation();
                 console.log(`🖼️ Image clicked for index ${index}`);
@@ -2739,10 +2894,10 @@ function populateImageGrid() {
                 }
             }, { once: false });
         }
-        
+
         imageGrid.appendChild(imageItem);
     });
-    
+
     console.log(`✅ Image grid populated successfully`);
 }
 
@@ -2752,10 +2907,10 @@ function toggleFavorite(index) {
         showNotification('⭐ Favorites are a premium feature', 'info');
         return;
     }
-    
+
     const memory = memories[index];
     const wasFavorite = memory.isFavorite;
-    
+
     // Check if we're adding a favorite and already have 5
     if (!wasFavorite) {
         const favoriteCount = memories.filter(m => m.isFavorite).length;
@@ -2764,21 +2919,21 @@ function toggleFavorite(index) {
             return;
         }
     }
-    
+
     // Toggle favorite status
     memory.isFavorite = !wasFavorite;
-    
+
     console.log(`⭐ Image ${index} favorite status: ${memory.isFavorite}`);
-    
+
     // Update UI
     populateImageGrid();
-    
+
     // Rebuild slideshow with new favorites
     if (mainSwiper) {
         mainSwiper.destroy(true, true);
     }
     initializeSwiper();
-    
+
     // Show notification
     if (memory.isFavorite) {
         const favoriteCount = memories.filter(m => m.isFavorite).length;
@@ -2793,10 +2948,10 @@ async function deleteImage(index) {
         showNotification(`❌ Minimum ${MIN_IMAGES} images required!`, 'error');
         return;
     }
-    
+
     if (confirm('Are you sure you want to remove this image?')) {
         const memory = memories[index];
-        
+
         // Delete from Cloudflare R2 and update backend
         try {
             const deletionPayload = {
@@ -2804,14 +2959,14 @@ async function deleteImage(index) {
                 memoryId: MEMORY_ID,
                 imageUrl: memory.fullImage
             };
-            
+
             console.log(`🗑️ Deleting from storage with payload:`, {
                 fileName: deletionPayload.fileName,
                 memoryId: deletionPayload.memoryId,
                 imageUrl: deletionPayload.imageUrl,
                 memoryObject: memory
             });
-            
+
             const response = await fetch(`${API_BASE_URL}/api/delete-image`, {
                 method: 'DELETE',
                 headers: {
@@ -2819,11 +2974,11 @@ async function deleteImage(index) {
                 },
                 body: JSON.stringify(deletionPayload)
             });
-            
+
             if (response.ok) {
                 const result = await response.json();
                 console.log(`✅ Image deletion response:`, result);
-                
+
                 if (result.details?.deletedFromR2) {
                     console.log(`🔥 Confirmed: Image deleted from Cloudflare R2`);
                     showNotification(`✅ Image deleted from cloud storage`, 'success');
@@ -2843,25 +2998,25 @@ async function deleteImage(index) {
             console.error('❌ Error deleting from storage:', error);
             // Continue with local deletion even if backend delete fails
         }
-        
+
         // Remove from memories array
         memories.splice(index, 1);
-        
+
         // Remove from swiper
         if (mainSwiper) {
             mainSwiper.removeSlide(index);
             mainSwiper.update();
         }
-        
+
         // Update IDs to maintain consistency
         memories.forEach((memory, newIndex) => {
             memory.id = newIndex;
         });
-        
+
         // Update UI once
         updateEditControls();
         populateImageGrid();
-        
+
         // Save updated gallery data to backend
         try {
             const galleryData = {
@@ -2884,19 +3039,19 @@ async function deleteImage(index) {
             console.error('❌ Failed to update gallery data in backend:', saveError);
             // Don't show error to user as the local deletion was successful
         }
-        
+
         showNotification('🗑️ Image removed successfully!', 'success');
     }
 }
 
 function triggerImageUpload() {
     console.log('🎯 triggerImageUpload called - this should not be used anymore');
-    
+
     if (isFileDialogOpen) {
         console.log('⚠️ File dialog already open via triggerImageUpload, ignoring');
         return;
     }
-    
+
     const input = document.getElementById('imageUploadInput');
     if (input && memories.length < MAX_IMAGES) {
         isFileDialogOpen = true;
@@ -2911,7 +3066,7 @@ function triggerImageUpload() {
 
 function addSlideToSwiper(memory) {
     if (!mainSwiper) return;
-    
+
     const imageUrl = getImageUrl(memory.fullImage);
     const slideHTML = `
         <div class="swiper-slide">
@@ -2927,10 +3082,10 @@ function addSlideToSwiper(memory) {
             </div>
         </div>
     `;
-    
+
     // Add slide only once
     mainSwiper.appendSlide(slideHTML);
-    
+
     // Update swiper
     mainSwiper.update();
 }
@@ -2944,10 +3099,10 @@ function openColorPalette() {
         colorPalette.classList.add('active');
         updateThemeButtons();
         updateColorOptions();
-        
+
         // Add event listeners when palette opens (in case they weren't attached earlier)
         attachColorPaletteListeners();
-        
+
         console.log('🎉 Color palette opened successfully, active class:', colorPalette.classList.contains('active'));
     } else {
         console.error('❌ Color palette panel not found');
@@ -2957,7 +3112,7 @@ function openColorPalette() {
 // Function to attach event listeners to color palette elements
 function attachColorPaletteListeners() {
     console.log('🔗 Attaching color palette event listeners...');
-    
+
     // Add click event listeners to theme buttons
     const themeButtons = document.querySelectorAll('.theme-btn');
     console.log('📱 Found theme buttons:', themeButtons.length);
@@ -2966,7 +3121,7 @@ function attachColorPaletteListeners() {
         btn.removeEventListener('click', handleThemeClick);
         btn.addEventListener('click', handleThemeClick);
     });
-    
+
     // Add click event listeners to color presets
     const colorPresets = document.querySelectorAll('.color-preset');
     console.log('🎨 Found color presets:', colorPresets.length);
@@ -2974,7 +3129,7 @@ function attachColorPaletteListeners() {
         preset.removeEventListener('click', handleColorPresetClick);
         preset.addEventListener('click', handleColorPresetClick);
     });
-    
+
     // Add click event listeners to background options
     const bgOptions = document.querySelectorAll('.bg-option');
     console.log('🖼️ Found background options:', bgOptions.length);
@@ -3011,11 +3166,11 @@ function showNotification(message, type = 'info', duration = 3000) {
     if (existingNotification) {
         existingNotification.remove();
     }
-    
+
     // Create notification element
     const notification = document.createElement('div');
     notification.className = `notification notification-${type}`;
-    
+
     // Handle multi-line messages
     if (message.includes('\n')) {
         // Convert newlines to proper line breaks for better formatting
@@ -3029,7 +3184,7 @@ function showNotification(message, type = 'info', duration = 3000) {
     } else {
         notification.textContent = message;
     }
-    
+
     // Add styles
     notification.style.cssText = `
         position: fixed;
@@ -3051,10 +3206,10 @@ function showNotification(message, type = 'info', duration = 3000) {
         line-height: 1.4;
         animation: slideInRight 0.3s ease-out;
     `;
-    
+
     // Add to page
     document.body.appendChild(notification);
-    
+
     // Auto remove after specified duration
     setTimeout(() => {
         if (notification.parentNode) {
@@ -3105,7 +3260,7 @@ function updateThemeButtons() {
 function updateColorOptions() {
     const lightColors = document.querySelectorAll('.color-preset[data-theme="light"]');
     const darkColors = document.querySelectorAll('.color-preset.dark-mode-color');
-    
+
     if (currentTheme === 'dark') {
         lightColors.forEach(preset => preset.style.display = 'none');
         darkColors.forEach(preset => preset.style.display = 'block');
@@ -3119,22 +3274,22 @@ function switchTheme(theme) {
     currentTheme = theme;
     const root = document.documentElement;
     root.setAttribute('data-theme', theme);
-    
+
     updateThemeButtons();
     updateColorOptions();
-    
+
     // Save theme preference
     localStorage.setItem('memorychain-theme', theme);
 }
 
 function applyColorPalette(colors, silent = false) {
     const root = document.documentElement;
-    
+
     // Determine color theme name from the colors array
     const colorThemeMap = {
         '["#2563eb","#1e40af","#3b82f6"]': 'blue',
         '["#3b82f6","#2563eb","#1d4ed8"]': 'blue',
-        '["#7c3aed","#5b21b6","#8b5cf6"]': 'purple', 
+        '["#7c3aed","#5b21b6","#8b5cf6"]': 'purple',
         '["#8b5cf6","#7c3aed","#6d28d9"]': 'purple',
         '["#059669","#047857","#10b981"]': 'green',
         '["#10b981","#059669","#047857"]': 'green',
@@ -3153,17 +3308,17 @@ function applyColorPalette(colors, silent = false) {
         '["#000000","#1f2937","#374151"]': 'black',
         '["#ffffff","#f1f5f9","#e2e8f0"]': 'black'
     };
-    
+
     const colorKey = JSON.stringify(colors);
     const themeName = colorThemeMap[colorKey] || 'blue';
-    
+
     // Apply the color theme to the root element
     root.setAttribute('data-color-theme', themeName);
-    
+
     // Save to localStorage for persistence
     localStorage.setItem('memorychain-colors', JSON.stringify(colors));
     localStorage.setItem('memorychain-color-theme', themeName);
-    
+
     // Only show notification if not silent
     if (!silent) {
         showNotification(`${themeName.charAt(0).toUpperCase() + themeName.slice(1)} theme applied!`);
@@ -3185,24 +3340,24 @@ function setSelectedColorPreset(colors) {
 // Background Style Functions
 function applyBackgroundStyle(bgType, silent = false) {
     const body = document.body;
-    
+
     // Remove all existing background classes
     body.classList.remove('bg-solid', 'bg-gradient', 'bg-pattern-dots', 'bg-pattern-hearts', 'bg-pattern-stars', 'bg-pattern-diamonds', 'bg-animated');
-    
+
     // Apply new background class
     body.classList.add(`bg-${bgType}`);
-    
+
     // Update global variable
     currentBackgroundStyle = bgType;
-    
+
     // Store preference
     localStorage.setItem('memorychain-background', bgType);
-    
+
     // Update floating shapes based on selection
     updateFloatingShapes(bgType);
-    
+
     console.log(`Applied background: ${bgType}`);
-    
+
     // Only show notification if not silent
     if (!silent) {
         showNotification(`${bgType.charAt(0).toUpperCase() + bgType.slice(1)} background applied!`);
@@ -3225,9 +3380,9 @@ function applyLoadedThemeSettings(settings) {
         console.log('⚠️ No theme settings to apply');
         return;
     }
-    
+
     console.log('🎨 Applying loaded theme settings:', settings);
-    
+
     try {
         // Apply theme (light/dark) - don't show notification
         if (settings.theme) {
@@ -3239,7 +3394,7 @@ function applyLoadedThemeSettings(settings) {
             localStorage.setItem('memorychain-theme', settings.theme);
             console.log(`✅ Applied theme: ${settings.theme}`);
         }
-        
+
         // Apply background style - don't show notification
         if (settings.backgroundStyle) {
             currentBackgroundStyle = settings.backgroundStyle;
@@ -3251,21 +3406,21 @@ function applyLoadedThemeSettings(settings) {
             setSelectedBackgroundOption(settings.backgroundStyle);
             console.log(`✅ Applied background: ${settings.backgroundStyle}`);
         }
-        
+
         // Apply color theme
         if (settings.colorTheme) {
             document.documentElement.setAttribute('data-color-theme', settings.colorTheme);
             localStorage.setItem('memorychain-color-theme', settings.colorTheme);
             console.log(`✅ Applied color theme: ${settings.colorTheme}`);
         }
-        
+
         // Apply welcome letter setting
         if (settings.showWelcomeLetter !== undefined) {
-            localStorage.setItem('memorychain-show-welcome-letter', 
+            localStorage.setItem('memorychain-show-welcome-letter',
                 settings.showWelcomeLetter ? 'true' : 'false');
             console.log(`✅ Applied welcome letter setting: ${settings.showWelcomeLetter}`);
         }
-        
+
         console.log('✨ All theme settings applied successfully!');
     } catch (error) {
         console.error('❌ Error applying theme settings:', error);
@@ -3278,7 +3433,7 @@ function updateFloatingShapes(bgType) {
     if (existingContainer) {
         existingContainer.remove();
     }
-    
+
     // Create new floating shapes based on pattern type
     if (bgType.startsWith('pattern-') || bgType === 'animated') {
         createFloatingShapes(bgType);
@@ -3288,13 +3443,13 @@ function updateFloatingShapes(bgType) {
 // Create floating shapes for different patterns
 function createFloatingShapes(bgType) {
     console.log('🎨 Creating floating shapes for:', bgType);
-    
+
     // Remove any existing floating shapes container
     const existingContainer = document.querySelector('.floating-shapes-container');
     if (existingContainer) {
         existingContainer.remove();
     }
-    
+
     // Create container for floating shapes
     const container = document.createElement('div');
     container.className = 'floating-shapes-container';
@@ -3308,11 +3463,11 @@ function createFloatingShapes(bgType) {
         z-index: -1;
         overflow: hidden;
     `;
-    
+
     // Determine shape type and count
     let shapeType = 'dot';
     let shapeCount = 80;
-    
+
     if (bgType === 'pattern-hearts') {
         shapeType = 'heart';
         shapeCount = 60;
@@ -3329,16 +3484,16 @@ function createFloatingShapes(bgType) {
         shapeType = 'mixed';
         shapeCount = 100;
     }
-    
+
     // Create shapes
     for (let i = 0; i < shapeCount; i++) {
         const shape = createShape(shapeType === 'mixed' ? getRandomShapeType() : shapeType, i);
         container.appendChild(shape);
     }
-    
+
     // Add container to body
     document.body.appendChild(container);
-    
+
     console.log(`✨ Created ${shapeCount} ${shapeType} shapes`);
 }
 
@@ -3346,18 +3501,18 @@ function createFloatingShapes(bgType) {
 function createShape(type, index) {
     const shape = document.createElement('div');
     shape.className = `floating-shape floating-${type}`;
-    
+
     // Random positioning from different starting points
     const x = Math.random() * 100;
     const y = Math.random() * 100;
     const size = Math.random() * 20 + 15; // 15-35px (slightly larger)
     const duration = Math.random() * 15 + 10; // 10-25s
     const delay = Math.random() * 5; // 0-5s
-    
+
     // Choose random animation direction
     const animations = [
         'floatFromTop',
-        'floatFromBottom', 
+        'floatFromBottom',
         'floatFromLeft',
         'floatFromRight',
         'floatDiagonal1',
@@ -3366,7 +3521,7 @@ function createShape(type, index) {
         'continuousFloat'
     ];
     const randomAnimation = animations[Math.floor(Math.random() * animations.length)];
-    
+
     shape.style.cssText = `
         position: absolute;
         left: ${x}%;
@@ -3378,7 +3533,7 @@ function createShape(type, index) {
         pointer-events: none;
         z-index: -1;
     `;
-    
+
     // Set shape appearance based on type
     switch (type) {
         case 'heart':
@@ -3403,7 +3558,7 @@ function createShape(type, index) {
             shape.style.boxShadow = '0 2px 4px rgba(0,0,0,0.2)';
             break;
     }
-    
+
     return shape;
 }
 
@@ -3414,73 +3569,73 @@ function getRandomShapeType() {
 }
 
 // Initialize color palette event listeners
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', function () {
     console.log('DOM loaded, initializing...');
-    
+
     // Load saved theme and colors
     const savedTheme = localStorage.getItem('memorychain-theme') || 'light';
     const savedColors = localStorage.getItem('memorychain-colors');
-    
+
     switchTheme(savedTheme);
-    
+
     if (savedColors) {
         const colors = JSON.parse(savedColors);
         applyColorPalette(colors, true); // Silent mode - no notification on load
         setSelectedColorPreset(colors);
     }
-    
+
     // Load saved background style
     const savedBackground = localStorage.getItem('memorychain-background') || 'gradient';
     applyBackgroundStyle(savedBackground, true); // Silent mode - no notification on load
     setSelectedBackgroundOption(savedBackground);
-    
+
     // Try to attach listeners immediately, and also when palette opens
     setTimeout(() => {
         console.log('⏰ Delayed listener attachment...');
         attachColorPaletteListeners();
     }, 1000);
-    
+
     console.log('✅ Initialization complete');
-    
+
     // Initialize Spotify player
     loadSavedSpotifyTrack();
     setupSpotifyUrlValidation();
-    
+
     // Add click handler for Spotify button
     const spotifyPlayBtn = document.getElementById('spotifyPlayBtn');
     if (spotifyPlayBtn) {
-        spotifyPlayBtn.addEventListener('click', function(e) {
+        spotifyPlayBtn.addEventListener('click', function (e) {
             e.stopPropagation(); // Prevent island toggle
             openSpotifyModal();
         });
     }
-    
+
     // Close edit overlay when clicking outside (only if element exists)
     const editOverlay = document.getElementById('editOverlay');
     if (editOverlay) {
-        editOverlay.addEventListener('click', function(e) {
+        editOverlay.addEventListener('click', function (e) {
             if (e.target === this) {
                 exitEditMode();
             }
         });
     }
-    
+
     // Close color palette when clicking outside
-    document.addEventListener('click', function(e) {
+    document.addEventListener('click', function (e) {
         const colorPalette = document.getElementById('colorPalettePanel');
         const editBtn = document.querySelector('.edit-btn');
         const colorBtn = document.querySelector('[onclick="openColorPalette()"]');
-        
+
         if (colorPalette.classList.contains('active') &&
-            !colorPalette.contains(e.target) && 
-            !editBtn.contains(e.target) && 
+            !colorPalette.contains(e.target) &&
+            !editBtn.contains(e.target) &&
             colorBtn && !colorBtn.contains(e.target)) {
             closeColorPalette();
         }
     });
-    
+
     updateImageCounter();
-    
+
     // Load saved gallery title
     const savedTitle = localStorage.getItem('memorychain-gallery-title');
     if (savedTitle) {
@@ -3513,19 +3668,19 @@ function disableHeaderEditing() {
 function makeHeaderEditable() {
     const title = document.getElementById('galleryTitle');
     const currentText = title.textContent;
-    
+
     title.contentEditable = true;
     title.focus();
-    
+
     // Select all text
     const range = document.createRange();
     range.selectNodeContents(title);
     const selection = window.getSelection();
     selection.removeAllRanges();
     selection.addRange(range);
-    
+
     // Handle Enter key to save
-    const handleKeydown = function(e) {
+    const handleKeydown = function (e) {
         if (e.key === 'Enter') {
             e.preventDefault();
             saveHeaderTitle();
@@ -3539,14 +3694,14 @@ function makeHeaderEditable() {
             title.removeEventListener('blur', handleBlur);
         }
     };
-    
+
     // Handle blur to save
-    const handleBlur = function() {
+    const handleBlur = function () {
         saveHeaderTitle();
         title.removeEventListener('keydown', handleKeydown);
         title.removeEventListener('blur', handleBlur);
     };
-    
+
     title.addEventListener('keydown', handleKeydown);
     title.addEventListener('blur', handleBlur);
 }
@@ -3554,23 +3709,23 @@ function makeHeaderEditable() {
 function saveHeaderTitle() {
     const title = document.getElementById('galleryTitle');
     let newTitle = title.textContent.trim();
-    
+
     // Prevent empty title
     if (!newTitle) {
         newTitle = 'SmartLocket Gallery';
     }
-    
+
     // Limit title length
     if (newTitle.length > 50) {
         newTitle = newTitle.substring(0, 50);
     }
-    
+
     title.textContent = newTitle;
     title.contentEditable = false;
-    
+
     // Save to localStorage
     localStorage.setItem('memorychain-gallery-title', newTitle);
-    
+
     // Show notification
     showNotification('Gallery title updated!', 'success');
 }
@@ -3592,24 +3747,24 @@ window.onEditClick = onEditClick;
 // Image Edit Modal Functions
 function openImageEditModal(index) {
     console.log(`🔍 openImageEditModal called with index: ${index}, memories.length: ${memories.length}`);
-    
+
     if (index < 0 || index >= memories.length) {
         console.error(`❌ Invalid index: ${index}, memories.length: ${memories.length}`);
         return;
     }
-    
+
     currentEditingImageIndex = index;
     const memory = memories[index];
     const modal = document.getElementById('imageEditModal');
-    
+
     console.log('📝 Memory to edit:', memory);
     console.log('🎨 Modal element:', modal);
-    
+
     if (!modal) {
         console.error('❌ Image edit modal not found in DOM');
         return;
     }
-    
+
     // Populate modal with current memory data
     const titleInput = document.getElementById('imageTitle');
     const descInput = document.getElementById('imageDescription');
@@ -3617,20 +3772,20 @@ function openImageEditModal(index) {
     const locationInput = document.getElementById('imageLocation');
     const tagsInput = document.getElementById('imageTags');
     const previewImage = document.getElementById('modalPreviewImage');
-    
+
     console.log('📋 Modal inputs:', { titleInput, descInput, dateInput, locationInput, tagsInput, previewImage });
-    
+
     if (titleInput) titleInput.value = memory.title || '';
     if (descInput) descInput.value = memory.description || '';
     if (dateInput) dateInput.value = memory.date || '';
     if (locationInput) locationInput.value = memory.location || '';
     if (tagsInput) tagsInput.value = memory.tags || '';
     if (previewImage) previewImage.src = getImageUrl(memory.fullImage) || '';
-    
+
     // Show modal
     modal.style.display = 'block';
     modal.classList.add('active');
-    
+
     console.log('✅ Modal should now be visible with display:', modal.style.display, 'and class:', modal.className);
 }
 
@@ -3648,23 +3803,23 @@ function saveImageDetails() {
         showNotification('❌ No image selected for editing', 'error');
         return;
     }
-    
+
     const memory = memories[currentEditingImageIndex];
-    
+
     // Get form values
     const titleInput = document.getElementById('imageTitle');
     const descInput = document.getElementById('imageDescription');
     const dateInput = document.getElementById('imageDate');
     const locationInput = document.getElementById('imageLocation');
     const tagsInput = document.getElementById('imageTags');
-    
+
     // Update memory object
     if (titleInput) memory.title = titleInput.value.trim() || memory.title;
     if (descInput) memory.description = descInput.value.trim() || memory.description;
     if (dateInput) memory.date = dateInput.value || memory.date;
     if (locationInput) memory.location = locationInput.value.trim() || memory.location;
     if (tagsInput) memory.tags = tagsInput.value.trim() || memory.tags;
-    
+
     // Update the swiper slide
     updateSwiperSlide(currentEditingImageIndex, {
         title: memory.title,
@@ -3673,13 +3828,13 @@ function saveImageDetails() {
         location: memory.location,
         tags: memory.tags
     });
-    
+
     // Update the image grid
     populateImageGrid();
-    
+
     // Close modal
     closeImageEditModal();
-    
+
     showNotification('✅ Memory details updated successfully!', 'success');
 }
 
@@ -3690,15 +3845,15 @@ function saveImageDetails() {
 function convertSpotifyUrl(url) {
     // Remove query parameters and hash
     url = url.split('?')[0].split('#')[0];
-    
+
     // Track URL patterns
     const trackPattern = /spotify\.com\/track\/([a-zA-Z0-9]+)/;
     const playlistPattern = /spotify\.com\/playlist\/([a-zA-Z0-9]+)/;
     const albumPattern = /spotify\.com\/album\/([a-zA-Z0-9]+)/;
     const artistPattern = /spotify\.com\/artist\/([a-zA-Z0-9]+)/;
-    
+
     let match, type, id;
-    
+
     if (match = url.match(trackPattern)) {
         type = 'track';
         id = match[1];
@@ -3714,7 +3869,7 @@ function convertSpotifyUrl(url) {
     } else {
         return null;
     }
-    
+
     return {
         type: type,
         id: id,
@@ -3731,7 +3886,7 @@ function openSpotifyModal(bypassPasscode = false) {
         shouldBypass: !STORED_PASSCODE_HASH || isEditMode || bypassPasscode || isPasscodeSessionValid(),
         STORED_PASSCODE_HASH: STORED_PASSCODE_HASH ? 'present' : 'null'
     });
-    
+
     // Check if passcode protection is enabled
     const sessionValid = isPasscodeSessionValid();
     if (STORED_PASSCODE_HASH && !isEditMode && !bypassPasscode && !sessionValid) {
@@ -3740,34 +3895,34 @@ function openSpotifyModal(bypassPasscode = false) {
         openPasscodeModal();
         return;
     }
-    
+
     console.log('✅ Proceeding to open Spotify modal');
     const modal = document.getElementById('spotifyModal');
     const urlInput = document.getElementById('spotifyUrl');
-    
+
     if (!modal) {
         console.error('❌ Spotify modal element not found!');
         return;
     }
-    
+
     if (!urlInput) {
         console.error('❌ Spotify URL input element not found!');
         return;
     }
-    
+
     console.log('🎵 Opening Spotify modal...');
-    
+
     // Clear any previous input
     urlInput.value = '';
     hideSpotifyPreview();
-    
+
     // Show modal
     modal.style.display = 'flex';
     setTimeout(() => {
         modal.classList.add('show');
         urlInput.focus();
     }, 10);
-    
+
     // Add escape key listener
     document.addEventListener('keydown', handleSpotifyModalEscape);
 }
@@ -3777,14 +3932,14 @@ function closeSpotifyModal(event) {
     if (event && event.target.closest('.spotify-modal-content')) {
         return;
     }
-    
+
     const modal = document.getElementById('spotifyModal');
     modal.classList.remove('show');
-    
+
     setTimeout(() => {
         modal.style.display = 'none';
     }, 300);
-    
+
     // Remove escape key listener
     document.removeEventListener('keydown', handleSpotifyModalEscape);
 }
@@ -3798,7 +3953,7 @@ function handleSpotifyModalEscape(event) {
 function showSpotifyPreview(embedUrl, type) {
     const previewSection = document.getElementById('previewSection');
     const previewContainer = document.getElementById('spotifyPreview');
-    
+
     const previewHeight = type === 'track' ? '152' : '200';
     previewContainer.innerHTML = `
         <iframe 
@@ -3811,14 +3966,14 @@ function showSpotifyPreview(embedUrl, type) {
             style="border-radius: 8px;">
         </iframe>
     `;
-    
+
     previewSection.style.display = 'block';
 }
 
 function hideSpotifyPreview() {
     const previewSection = document.getElementById('previewSection');
     const previewContainer = document.getElementById('spotifyPreview');
-    
+
     previewSection.style.display = 'none';
     previewContainer.innerHTML = '';
 }
@@ -3826,42 +3981,42 @@ function hideSpotifyPreview() {
 function loadSpotifyTrack() {
     const urlInput = document.getElementById('spotifyUrl');
     const url = urlInput.value.trim();
-    
+
     if (!url) {
         showNotification('Please enter a Spotify URL', 'error');
         return;
     }
-    
+
     const spotifyData = convertSpotifyUrl(url);
-    
+
     if (!spotifyData) {
         showNotification('Invalid Spotify URL. Please check the format.', 'error');
         return;
     }
-    
+
     // Show preview first
     showSpotifyPreview(spotifyData.embedUrl, spotifyData.type);
-    
+
     // Save to localStorage
     localStorage.setItem('spotifyPlayer', JSON.stringify(spotifyData));
-    
+
     // Update global variables
     currentSpotifyTrack = spotifyData;
     currentSpotifyUrl = spotifyData.embedUrl;
-    
+
     // Update the player card
     updateSpotifyPlayerCard(spotifyData);
-    
+
     // Save to backend immediately
     saveSpotifyToBackend(spotifyData);
-    
+
     // Show clear button
     const clearBtn = document.getElementById('clearBtn');
     if (clearBtn) clearBtn.style.display = 'inline-block';
-    
+
     // Close modal
     closeSpotifyModal();
-    
+
     showNotification('Spotify track loaded successfully!', 'success');
 }
 
@@ -3874,7 +4029,7 @@ async function saveSpotifyToBackend(spotifyData) {
 
     try {
         console.log('🎵 Saving Spotify track to backend:', spotifyData);
-        
+
         const response = await fetch(`${API_BASE_URL}/api/memory/${MEMORY_ID}`, {
             method: 'PUT',
             headers: {
@@ -3905,7 +4060,7 @@ async function clearSpotifyFromBackend() {
 
     try {
         console.log('🗑️ Clearing Spotify track from backend');
-        
+
         const response = await fetch(`${API_BASE_URL}/api/memory/${MEMORY_ID}`, {
             method: 'PUT',
             headers: {
@@ -3924,7 +4079,7 @@ async function clearSpotifyFromBackend() {
         // Clear global variables
         currentSpotifyTrack = null;
         currentSpotifyUrl = null;
-        
+
         console.log('✅ Spotify track cleared from backend');
     } catch (error) {
         console.error('❌ Error clearing Spotify from backend:', error);
@@ -3935,15 +4090,15 @@ function updateSpotifyPlayerCard(data) {
     const playerCard = document.getElementById('spotifyPlayerCard');
     const spotifyInfo = document.getElementById('spotifyInfo');
     const playBtn = document.getElementById('spotifyPlayBtn');
-    
+
     if (!playerCard || !spotifyInfo || !playBtn) return;
-    
+
     // Update button text
     playBtn.innerHTML = '🎵 Change';
-    
+
     // Show track info
     spotifyInfo.style.display = 'block';
-    
+
     // Add embedded player to the card with smaller height
     const embedHeight = data.type === 'track' ? '152' : '200';
     spotifyInfo.innerHTML = `
@@ -3958,14 +4113,14 @@ function updateSpotifyPlayerCard(data) {
             style="border-radius: 8px;">
         </iframe>
     `;
-    
+
     // Add visual indicator
     playerCard.classList.add('has-track');
 }
 
 function clearSpotifyTrack(bypassPasscode = false) {
     const sessionValid = isPasscodeSessionValid();
-    
+
     console.log('🔍 clearSpotifyTrack called with:', {
         bypassPasscode,
         STORED_PASSCODE_HASH: !!STORED_PASSCODE_HASH,
@@ -3975,27 +4130,27 @@ function clearSpotifyTrack(bypassPasscode = false) {
         currentTime: Date.now(),
         timeRemaining: window.passcodeSessionExpiry ? (window.passcodeSessionExpiry - Date.now()) / 1000 : 'no expiry'
     });
-    
+
     // Check if passcode protection is enabled
     if (STORED_PASSCODE_HASH && !isEditMode && !bypassPasscode && !sessionValid) {
         console.log('🔒 Passcode required to clear Spotify track');
-        
+
         // Store the action to perform after passcode verification
         window.pendingSpotifyAction = 'clear';
         openPasscodeModal();
         return;
     }
-    
+
     console.log('✅ Clearing Spotify track (session valid or bypassed)');
-    
+
     // Remove from localStorage
     localStorage.removeItem('spotifyPlayer');
-    
+
     // Reset player card
     const playerCard = document.getElementById('spotifyPlayerCard');
     const spotifyInfo = document.getElementById('spotifyInfo');
     const playBtn = document.getElementById('spotifyPlayBtn');
-    
+
     if (playBtn) playBtn.innerHTML = '🎵 Add Song';
     if (spotifyInfo) {
         spotifyInfo.style.display = 'none';
@@ -4006,22 +4161,22 @@ function clearSpotifyTrack(bypassPasscode = false) {
             </div>
         `;
     }
-    
+
     if (playerCard) {
         playerCard.classList.remove('has-track');
         playerCard.classList.remove('expanded');
     }
-    
+
     // Hide clear button
     const clearBtn = document.getElementById('clearBtn');
     if (clearBtn) clearBtn.style.display = 'none';
-    
+
     // Hide preview
     hideSpotifyPreview();
-    
+
     // Clear from backend
     clearSpotifyFromBackend();
-    
+
     showNotification('Spotify track cleared', 'info');
 }
 
@@ -4039,7 +4194,7 @@ function loadSavedSpotifyTrack() {
             console.error('Error loading Spotify from backend:', error);
         });
     }
-    
+
     // Fallback to localStorage
     const saved = localStorage.getItem('spotifyPlayer');
     if (saved) {
@@ -4057,7 +4212,7 @@ function loadSavedSpotifyTrack() {
 function setupSpotifyUrlValidation() {
     const urlInput = document.getElementById('spotifyUrl');
     if (urlInput) {
-        urlInput.addEventListener('input', function() {
+        urlInput.addEventListener('input', function () {
             const url = this.value.trim();
             if (url) {
                 const spotifyData = convertSpotifyUrl(url);
@@ -4083,7 +4238,7 @@ window.clearSpotifyTrack = clearSpotifyTrack;
 function toggleSpotifyIsland() {
     const playerCard = document.getElementById('spotifyPlayerCard');
     const isExpanded = playerCard.classList.contains('expanded');
-    
+
     if (isExpanded) {
         playerCard.classList.remove('expanded');
     } else {
@@ -4092,7 +4247,7 @@ function toggleSpotifyIsland() {
 }
 
 // Close Dynamic Island when clicking outside
-document.addEventListener('click', function(e) {
+document.addEventListener('click', function (e) {
     const playerCard = document.getElementById('spotifyPlayerCard');
     if (playerCard && !playerCard.contains(e.target)) {
         playerCard.classList.remove('expanded');
@@ -4100,10 +4255,10 @@ document.addEventListener('click', function(e) {
 });
 
 // Prevent clicks inside the island from closing it
-window.addEventListener('DOMContentLoaded', function() {
+window.addEventListener('DOMContentLoaded', function () {
     const playerCard = document.getElementById('spotifyPlayerCard');
     if (playerCard) {
-        playerCard.addEventListener('click', function(e) {
+        playerCard.addEventListener('click', function (e) {
             e.stopPropagation();
         });
     }

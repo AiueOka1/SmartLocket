@@ -8,7 +8,8 @@
     <!-- Google Font - Dancing Script for cursive letter -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Dancing+Script:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Dancing+Script:wght@400;500;600;700&display=swap"
+        rel="stylesheet">
     <link rel="stylesheet" href="../src/style.css">
     <!-- Swiper CSS -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.css" />
@@ -24,7 +25,8 @@
                     <div class="text">
                         <strong>Letter For Special Someone,</strong>
                         <p>
-                            This is a special letter just for you. It holds all the memories we've created together and the love we share.
+                            This is a special letter just for you. It holds all the memories we've created together and
+                            the love we share.
                         </p>
                     </div>
                 </div>
@@ -92,11 +94,16 @@
 
         </div>
 
-        <!-- Edit Button (Bottom Right) -->
-
     </main>
+
+    <!-- Video Section: Only visible for premium users (BELOW slider) -->
+    <div id="galleryVideoSection">
+        <h3>Special Video Memory</h3>
+        <video id="galleryVideo" controls></video>
+    </div>
+    
+    <!-- Edit Button (Bottom Right) -->
     <button class="edit-btn" onclick="onEditClick()" title="Edit Gallery">
-        <button class="edit-btn" onclick="onEditClick()" title="Edit Gallery">
             <svg id="edit-icon" width="24" height="24" viewBox="0 0 24 24" fill="none">
                 <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7" stroke="currentColor" stroke-width="2"
                     stroke-linecap="round" stroke-linejoin="round" />
@@ -373,7 +380,9 @@
                         <p>Drag & drop up to 5 images or click to browse</p>
                         <p class="file-types">Images only: JPG, PNG, GIF, WEBP, BMP, SVG</p>
                     </div>
-                    <input type="file" id="imageUploadInput" multiple accept="image/jpeg,image/jpg,image/png,image/gif,image/webp,image/bmp,image/svg+xml" style="display: none;">
+                    <input type="file" id="imageUploadInput" multiple
+                        accept="image/jpeg,image/jpg,image/png,image/gif,image/webp,image/bmp,image/svg+xml"
+                        style="display: none;">
                 </div>
 
                 <!-- Current Images Management -->
@@ -406,6 +415,27 @@
                         Done
                     </button>
                 </div>
+
+                <!-- Video Upload Area (Premium Only) -->
+                <!-- Video Upload Area (Premium Only) -->
+                <div class="video-upload-area" id="videoUploadArea" style="display:none;">
+                    <div class="upload-zone" id="videoUploadZone">
+                        <svg width="32" height="32" fill="none" viewBox="0 0 24 24">
+                            <path d="M17 7l4 4m0 0l-4 4m4-4H3" stroke="currentColor" stroke-width="2" />
+                        </svg>
+                        <h4>Upload MP4 Video</h4>
+                        <p>Only 1 video allowed. Max size: 30MB. MP4 only.</p>
+                        <input type="file" id="videoUploadInput" accept="video/mp4" style="display:none;">
+                        <button type="button" class="upload-btn"
+                            onclick="document.getElementById('videoUploadInput').click()">Choose Video</button>
+                    </div>
+                    <div id="currentVideoArea" style="display:none;">
+                        <h4>Current Video</h4>
+                        <video id="currentVideoPreview" controls></video>
+                        <button type="button" class="image-cancel-btn" onclick="deleteCurrentVideo()">Delete Video</button>
+                    </div>
+                </div>
+
             </div>
         </div>
 
@@ -568,25 +598,28 @@
                     <div class="image-field-group">
                         <label for="passcodeInput">
                             <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-                                <rect x="3" y="11" width="18" height="11" rx="2" ry="2" stroke="currentColor" stroke-width="2"/>
-                                <path d="M7 11V7a5 5 0 0 1 10 0v4" stroke="currentColor" stroke-width="2"/>
+                                <rect x="3" y="11" width="18" height="11" rx="2" ry="2" stroke="currentColor"
+                                    stroke-width="2" />
+                                <path d="M7 11V7a5 5 0 0 1 10 0v4" stroke="currentColor" stroke-width="2" />
                             </svg>
                             Passcode
                         </label>
                         <!-- Wrap password input in a non-submitting form to satisfy browser/password-manager expectations -->
                         <form onsubmit="return false;">
-                            <input type="password" id="passcodeInput" placeholder="Enter 6-digit passcode" 
-                                   maxlength="6" pattern="[0-9]{6}" inputmode="numeric"
-                                   style="font-size: 1.2rem; letter-spacing: 0.3em; text-align: center;">
+                            <input type="password" id="passcodeInput" placeholder="Enter 6-digit passcode" maxlength="6"
+                                pattern="[0-9]{6}" inputmode="numeric"
+                                style="font-size: 1.2rem; letter-spacing: 0.3em; text-align: center;">
                         </form>
                     </div>
 
-                    <div id="passcodeError" style="display: none; color: #ef4444; text-align: center; margin-top: 1rem; font-size: 0.9rem;">
+                    <div id="passcodeError"
+                        style="display: none; color: #ef4444; text-align: center; margin-top: 1rem; font-size: 0.9rem;">
                         ❌ Incorrect passcode. Please try again.
                     </div>
 
                     <div style="text-align: center; margin-top: 1rem;">
-                        <a href="#" onclick="openForgotPasscodeModal(); return false;" style="color: var(--primary-color); text-decoration: none; font-size: 0.9rem;">
+                        <a href="#" onclick="openForgotPasscodeModal(); return false;"
+                            style="color: var(--primary-color); text-decoration: none; font-size: 0.9rem;">
                             Forgot Passcode?
                         </a>
                     </div>
@@ -600,7 +633,8 @@
                         </svg>
                         Cancel
                     </button>
-                    <button class="image-save-btn" onclick="console.log('🔐 Unlock button clicked!'); console.log('🔐 Function exists?', typeof verifyPasscodeAndEnterEditMode); verifyPasscodeAndEnterEditMode(); console.log('🔐 verifyPasscodeAndEnterEditMode call completed');">
+                    <button class="image-save-btn"
+                        onclick="console.log('🔐 Unlock button clicked!'); console.log('🔐 Function exists?', typeof verifyPasscodeAndEnterEditMode); verifyPasscodeAndEnterEditMode(); console.log('🔐 verifyPasscodeAndEnterEditMode call completed');">
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
                             <polyline points="20,6 9,17 4,12" stroke="currentColor" stroke-width="2" />
                         </svg>
@@ -627,26 +661,31 @@
                     <div class="image-field-group">
                         <label for="resetMemoryId">
                             <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-                                <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2" stroke="currentColor" stroke-width="2"/>
-                                <circle cx="12" cy="7" r="4" stroke="currentColor" stroke-width="2"/>
+                                <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2" stroke="currentColor"
+                                    stroke-width="2" />
+                                <circle cx="12" cy="7" r="4" stroke="currentColor" stroke-width="2" />
                             </svg>
                             Memory ID
                         </label>
-                        <input type="text" id="resetMemoryId" placeholder="Enter your Memory ID" style="text-transform: uppercase;" disabled>
+                        <input type="text" id="resetMemoryId" placeholder="Enter your Memory ID"
+                            style="text-transform: uppercase;" disabled>
                     </div>
 
                     <div class="image-field-group">
                         <label for="resetEmail">
                             <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-                                <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" stroke="currentColor" stroke-width="2"/>
-                                <polyline points="22,6 12,13 2,6" stroke="currentColor" stroke-width="2"/>
+                                <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"
+                                    stroke="currentColor" stroke-width="2" />
+                                <polyline points="22,6 12,13 2,6" stroke="currentColor" stroke-width="2" />
                             </svg>
                             Email Address
                         </label>
                         <input type="email" id="resetEmail" placeholder="your@email.com">
                     </div>
 
-                    <div id="forgotStep1Error" style="display: none; color: #ef4444; text-align: center; margin-top: 1rem; font-size: 0.9rem;"></div>
+                    <div id="forgotStep1Error"
+                        style="display: none; color: #ef4444; text-align: center; margin-top: 1rem; font-size: 0.9rem;">
+                    </div>
                 </div>
 
                 <!-- Step 2: Enter Code & New Passcode -->
@@ -658,48 +697,51 @@
                     <div class="image-field-group">
                         <label for="verificationCode">
                             <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-                                <rect x="3" y="11" width="18" height="11" rx="2" ry="2" stroke="currentColor" stroke-width="2"/>
-                                <path d="M7 11V7a5 5 0 0 1 10 0v4" stroke="currentColor" stroke-width="2"/>
+                                <rect x="3" y="11" width="18" height="11" rx="2" ry="2" stroke="currentColor"
+                                    stroke-width="2" />
+                                <path d="M7 11V7a5 5 0 0 1 10 0v4" stroke="currentColor" stroke-width="2" />
                             </svg>
                             Verification Code
                         </label>
-                        <input type="text" id="verificationCode" placeholder="Enter 6-digit code" 
-                               maxlength="6" pattern="[0-9]{6}" inputmode="numeric"
-                               style="font-size: 1.2rem; letter-spacing: 0.3em; text-align: center;">
+                        <input type="text" id="verificationCode" placeholder="Enter 6-digit code" maxlength="6"
+                            pattern="[0-9]{6}" inputmode="numeric"
+                            style="font-size: 1.2rem; letter-spacing: 0.3em; text-align: center;">
                     </div>
 
                     <div class="image-field-group">
                         <label for="newPasscode">
                             <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-                                <path d="M12 2L2 7l10 5 10-5-10-5z" stroke="currentColor" stroke-width="2"/>
-                                <path d="M2 17l10 5 10-5M2 12l10 5 10-5" stroke="currentColor" stroke-width="2"/>
+                                <path d="M12 2L2 7l10 5 10-5-10-5z" stroke="currentColor" stroke-width="2" />
+                                <path d="M2 17l10 5 10-5M2 12l10 5 10-5" stroke="currentColor" stroke-width="2" />
                             </svg>
                             New Passcode
                         </label>
                         <!-- Wrap password input in a non-submitting form to satisfy browser/password-manager expectations -->
                         <form onsubmit="return false;">
-                            <input type="password" id="newPasscode" placeholder="Enter new 6-digit passcode" 
-                                   maxlength="6" pattern="[0-9]{6}" inputmode="numeric"
-                                   style="font-size: 1.2rem; letter-spacing: 0.3em; text-align: center;">
+                            <input type="password" id="newPasscode" placeholder="Enter new 6-digit passcode"
+                                maxlength="6" pattern="[0-9]{6}" inputmode="numeric"
+                                style="font-size: 1.2rem; letter-spacing: 0.3em; text-align: center;">
                         </form>
                     </div>
 
                     <div class="image-field-group">
                         <label for="confirmNewPasscode">
                             <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-                                <polyline points="20,6 9,17 4,12" stroke="currentColor" stroke-width="2"/>
+                                <polyline points="20,6 9,17 4,12" stroke="currentColor" stroke-width="2" />
                             </svg>
                             Confirm New Passcode
                         </label>
                         <!-- Wrap password input in a non-submitting form to satisfy browser/password-manager expectations -->
                         <form onsubmit="return false;">
-                            <input type="password" id="confirmNewPasscode" placeholder="Re-enter new passcode" 
-                                   maxlength="6" pattern="[0-9]{6}" inputmode="numeric"
-                                   style="font-size: 1.2rem; letter-spacing: 0.3em; text-align: center;">
+                            <input type="password" id="confirmNewPasscode" placeholder="Re-enter new passcode"
+                                maxlength="6" pattern="[0-9]{6}" inputmode="numeric"
+                                style="font-size: 1.2rem; letter-spacing: 0.3em; text-align: center;">
                         </form>
                     </div>
 
-                    <div id="forgotStep2Error" style="display: none; color: #ef4444; text-align: center; margin-top: 1rem; font-size: 0.9rem;"></div>
+                    <div id="forgotStep2Error"
+                        style="display: none; color: #ef4444; text-align: center; margin-top: 1rem; font-size: 0.9rem;">
+                    </div>
                 </div>
 
                 <!-- Success Message -->
@@ -707,21 +749,22 @@
                     <div style="text-align: center; padding: 2rem;">
                         <div style="font-size: 4rem; margin-bottom: 1rem;">✅</div>
                         <h3 style="color: var(--success-color); margin-bottom: 1rem;">Passcode Reset Successfully!</h3>
-                        <p style="color: var(--text-secondary);">Your new passcode has been saved. You can now use it to edit your gallery.</p>
+                        <p style="color: var(--text-secondary);">Your new passcode has been saved. You can now use it to
+                            edit your gallery.</p>
                     </div>
                 </div>
 
                 <div class="modal-footer" id="forgotFooter1">
                     <button class="image-cancel-btn" onclick="closeForgotPasscodeModal()">
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-                            <line x1="18" y1="6" x2="6" y2="18" stroke="currentColor" stroke-width="2"/>
-                            <line x1="6" y1="6" x2="18" y2="18" stroke="currentColor" stroke-width="2"/>
+                            <line x1="18" y1="6" x2="6" y2="18" stroke="currentColor" stroke-width="2" />
+                            <line x1="6" y1="6" x2="18" y2="18" stroke="currentColor" stroke-width="2" />
                         </svg>
                         Cancel
                     </button>
                     <button class="image-save-btn" onclick="sendResetCode()">
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-                            <path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z" stroke="currentColor" stroke-width="2"/>
+                            <path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z" stroke="currentColor" stroke-width="2" />
                         </svg>
                         Send Code
                     </button>
@@ -730,8 +773,8 @@
                 <div class="modal-footer" id="forgotFooter2" style="display: none;">
                     <button class="image-cancel-btn" onclick="backToStep1()">
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-                            <line x1="19" y1="12" x2="5" y2="12" stroke="currentColor" stroke-width="2"/>
-                            <polyline points="12,19 5,12 12,5" stroke="currentColor" stroke-width="2"/>
+                            <line x1="19" y1="12" x2="5" y2="12" stroke="currentColor" stroke-width="2" />
+                            <polyline points="12,19 5,12 12,5" stroke="currentColor" stroke-width="2" />
                         </svg>
                         Back
                     </button>
@@ -744,16 +787,18 @@
                 </div>
 
                 <div class="modal-footer" id="forgotFooter3" style="display: none;">
-                    <button class="image-save-btn" onclick="closeForgotPasscodeModal(); window.location.reload();" style="width: 100%;">
+                    <button class="image-save-btn" onclick="closeForgotPasscodeModal(); window.location.reload();"
+                        style="width: 100%;">
                         Done
                     </button>
                 </div>
             </div>
         </div>
 
+
         <!-- Swiper JS -->
         <script src="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.js"></script>
-        <script src="../config.js"></script>
+        <script src="./config.js"></script>
         <script src="../src/script.js"></script>
 </body>
 

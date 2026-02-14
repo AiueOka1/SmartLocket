@@ -64,10 +64,10 @@ function setupRoutes(app, db, admin, r2Client, transporter, bcrypt) {
       console.error('Failed to import AWS SDK:', error.message);
     }
   }
-  
+
   // Health check
   app.get("/health", (req, res) => {
-    res.json({status: "ok"});
+    res.json({ status: "ok" });
   });
 
   // Image proxy route - serves R2 images with proper CORS headers
@@ -75,30 +75,30 @@ function setupRoutes(app, db, admin, r2Client, transporter, bcrypt) {
     try {
       // Get the image path from the URL
       const imagePath = req.params[0]; // Get everything after /api/image/
-      
+
       // 🔒 LOCKED - Construct R2 URL using LOCKED configuration
       const r2BaseUrl = process.env.R2_PUBLIC_URL || 'https://pub-5d6eb9dacf9146a2bd3bff425e11c1b2.r2.dev';
       const imageUrl = `${r2BaseUrl}/${imagePath}`;
-      
+
       console.log(`📸 Proxying image: ${imageUrl}`);
-      
+
       // Fetch image from R2
       const response = await fetch(imageUrl);
-      
+
       if (!response.ok) {
         console.log(`❌ R2 fetch failed: ${response.status} ${response.statusText}`);
-        return res.status(response.status).json({ 
+        return res.status(response.status).json({
           error: 'Image not found',
           status: response.status,
           statusText: response.statusText,
           url: imageUrl
         });
       }
-      
+
       // Get image buffer
       const imageBuffer = await response.arrayBuffer();
       const contentType = response.headers.get('content-type') || 'image/jpeg';
-      
+
       // Set CORS headers and content type
       res.set({
         'Content-Type': contentType,
@@ -108,13 +108,13 @@ function setupRoutes(app, db, admin, r2Client, transporter, bcrypt) {
         'Cache-Control': 'public, max-age=31536000', // Cache for 1 year
         'Content-Length': imageBuffer.byteLength
       });
-      
+
       // Send image data
       res.send(Buffer.from(imageBuffer));
-      
+
     } catch (error) {
       console.error('❌ Image proxy error:', error);
-      res.status(500).json({ 
+      res.status(500).json({
         error: 'Failed to fetch image',
         message: error.message
       });
@@ -127,13 +127,13 @@ function setupRoutes(app, db, admin, r2Client, transporter, bcrypt) {
     const path = require('path');
     const filename = req.url.replace('/', '');
     const filePath = path.join(__dirname, '../backend/uploads', filename);
-    
+
     if (fs.existsSync(filePath)) {
       res.setHeader('Content-Type', 'image/jpeg');
       res.setHeader('Cache-Control', 'public, max-age=31536000');
       res.sendFile(path.resolve(filePath));
     } else {
-      res.status(404).json({error: 'Image not found'});
+      res.status(404).json({ error: 'Image not found' });
     }
   });
 
@@ -234,7 +234,7 @@ function setupRoutes(app, db, admin, r2Client, transporter, bcrypt) {
 
   // Generate batch
   app.post("/api/admin/generate-batch", async (req, res) => {
-    const {quantity, photoLimit, prefix, premium} = req.body;
+    const { quantity, photoLimit, prefix, premium } = req.body;
 
     try {
       const batch = [];
@@ -387,7 +387,7 @@ function setupRoutes(app, db, admin, r2Client, transporter, bcrypt) {
 
   // Mark as written
   app.post(["/api/admin/mark-written/:memoryId"], async (req, res) => {
-    const {memoryId} = req.params;
+    const { memoryId } = req.params;
 
     try {
       const docRef = db.collection("nfcChains").doc(memoryId);
@@ -421,7 +421,7 @@ function setupRoutes(app, db, admin, r2Client, transporter, bcrypt) {
 
   // Send activation code
   app.post(["/api/activation/send-code", "/activation/send-code"], async (req, res) => {
-    const {memoryId, email} = req.body;
+    const { memoryId, email } = req.body;
 
     if (!memoryId || !email) {
       return res.status(400).json({
@@ -520,7 +520,7 @@ function setupRoutes(app, db, admin, r2Client, transporter, bcrypt) {
 
   // Resend verification code
   app.post(["/api/activation/resend-code", "/activation/resend-code"], async (req, res) => {
-    const {memoryId, email} = req.body;
+    const { memoryId, email } = req.body;
 
     if (!memoryId || !email) {
       return res.status(400).json({
@@ -583,7 +583,7 @@ function setupRoutes(app, db, admin, r2Client, transporter, bcrypt) {
             </div>
           `,
         });
-        console.log(`📧 New code sent to ${email}`);
+        console.log(`New code sent to ${email}`);
       } catch (emailError) {
         console.log(`⚠️ Email service not configured, verification code: ${verificationCode}`);
         // Don't fail in development if email service isn't configured
@@ -609,11 +609,11 @@ function setupRoutes(app, db, admin, r2Client, transporter, bcrypt) {
 
   // Complete activation
   app.post(["/api/activation/complete", "/activation/complete"], async (req, res) => {
-    const {memoryId, email, passcode, verificationCode} = req.body;
+    const { memoryId, email, passcode, verificationCode } = req.body;
     const token = req.headers.authorization && req.headers.authorization.replace("Bearer ", "");
 
     if (!memoryId || !email || !passcode || !token || !verificationCode) {
-      return res.status(400).json({message: "All fields required"});
+      return res.status(400).json({ message: "All fields required" });
     }
 
     try {
@@ -621,23 +621,23 @@ function setupRoutes(app, db, admin, r2Client, transporter, bcrypt) {
       const tokenDoc = await tokenRef.get();
 
       if (!tokenDoc.exists) {
-        return res.status(401).json({message: "Invalid or expired token"});
+        return res.status(401).json({ message: "Invalid or expired token" });
       }
 
       const tokenData = tokenDoc.data();
 
       if (Date.now() > tokenData.expiry) {
         await tokenRef.delete();
-        return res.status(401).json({message: "Token expired"});
+        return res.status(401).json({ message: "Token expired" });
       }
 
       if (tokenData.memoryId !== memoryId || tokenData.email !== email) {
-        return res.status(401).json({message: "Token mismatch"});
+        return res.status(401).json({ message: "Token mismatch" });
       }
 
       // Verify the provided verification code matches the stored code
       if (tokenData.code !== verificationCode) {
-        return res.status(401).json({message: "Invalid verification code"});
+        return res.status(401).json({ message: "Invalid verification code" });
       }
 
       const passcodeHash = await hashPasscode(passcode, bcrypt);
@@ -682,20 +682,20 @@ function setupRoutes(app, db, admin, r2Client, transporter, bcrypt) {
       });
     } catch (err) {
       console.error("Activation error:", err);
-      return res.status(500).json({success: false});
+      return res.status(500).json({ success: false });
     }
   });
 
   // Get memory
   app.get(["/api/memory/:memoryId", "/memory/:memoryId"], async (req, res) => {
-    const {memoryId} = req.params;
+    const { memoryId } = req.params;
 
     try {
       const docRef = db.collection("nfcChains").doc(memoryId);
       const doc = await docRef.get();
 
       if (!doc.exists) {
-        return res.status(404).json({message: "NFCchain not found"});
+        return res.status(404).json({ message: "NFCchain not found" });
       }
 
       const data = doc.data();
@@ -709,6 +709,7 @@ function setupRoutes(app, db, admin, r2Client, transporter, bcrypt) {
         galleryTitle: data.galleryTitle,
         galleryData: data.galleryData,
         images: data.images || [],
+        videoUrl: data.videoUrl || null,
         letterContent: data.letterContent,
         spotifyUrl: data.spotifyUrl,
         spotifyTrack: data.spotifyTrack || null,
@@ -719,17 +720,17 @@ function setupRoutes(app, db, admin, r2Client, transporter, bcrypt) {
       });
     } catch (err) {
       console.error(err);
-      return res.status(500).json({message: "Failed to fetch memory"});
+      return res.status(500).json({ message: "Failed to fetch memory" });
     }
   });
 
   // Update memory
   app.put(["/api/memory/:memoryId", "/memory/:memoryId"], async (req, res) => {
-    const {memoryId} = req.params;
+    const { memoryId } = req.params;
     const updates = req.body;
 
     if (!updates || !Object.keys(updates).length) {
-      return res.status(400).json({message: "No update data"});
+      return res.status(400).json({ message: "No update data" });
     }
 
     try {
@@ -737,7 +738,7 @@ function setupRoutes(app, db, admin, r2Client, transporter, bcrypt) {
       const doc = await ref.get();
 
       if (!doc.exists) {
-        return res.status(404).json({message: "NFCchain not found"});
+        return res.status(404).json({ message: "NFCchain not found" });
       }
 
       await ref.update({
@@ -745,19 +746,19 @@ function setupRoutes(app, db, admin, r2Client, transporter, bcrypt) {
         updatedAt: admin.firestore.FieldValue.serverTimestamp(),
       });
 
-      return res.json({success: true});
+      return res.json({ success: true });
     } catch (err) {
       console.error(err);
-      return res.status(500).json({success: false});
+      return res.status(500).json({ success: false });
     }
   });
 
   // Verify passcode
   app.post(["/api/verify-passcode", "/verify-passcode"], async (req, res) => {
-    const {memoryId, passcode} = req.body;
+    const { memoryId, passcode } = req.body;
 
     if (!memoryId || !passcode) {
-      return res.status(400).json({valid: false});
+      return res.status(400).json({ valid: false });
     }
 
     try {
@@ -765,29 +766,29 @@ function setupRoutes(app, db, admin, r2Client, transporter, bcrypt) {
       const doc = await ref.get();
 
       if (!doc.exists) {
-        return res.status(404).json({valid: false});
+        return res.status(404).json({ valid: false });
       }
 
       const data = doc.data();
 
       if (!data.passcodeHash) {
-        return res.json({valid: true});
+        return res.json({ valid: true });
       }
 
       const valid = await verifyPasscode(passcode, data.passcodeHash, bcrypt);
-      return res.json({valid});
+      return res.json({ valid });
     } catch (err) {
       console.error(err);
-      return res.status(500).json({valid: false});
+      return res.status(500).json({ valid: false });
     }
   });
 
   // Upload image
   app.post(["/api/upload-image", "/upload-image"], async (req, res) => {
-    const {memoryId, imageData, fileName} = req.body;
+    const { memoryId, imageData, fileName } = req.body;
 
     if (!memoryId || !imageData) {
-      return res.status(400).json({message: "Missing image data"});
+      return res.status(400).json({ message: "Missing image data" });
     }
 
     // 🚫 STRICT FILE TYPE VALIDATION - Server-side validation
@@ -796,7 +797,7 @@ function setupRoutes(app, db, admin, r2Client, transporter, bcrypt) {
       const allowedExtensions = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp', 'svg'];
       const videoExtensions = ['mp4', 'mov', 'avi', 'mkv', 'wmv', 'flv', 'webm', 'm4v'];
       const audioExtensions = ['mp3', 'wav', 'aac', 'm4a', 'ogg', 'wma', 'flac'];
-      
+
       // Reject video and audio files explicitly
       if (videoExtensions.includes(ext) || audioExtensions.includes(ext)) {
         return res.status(400).json({
@@ -804,7 +805,7 @@ function setupRoutes(app, db, admin, r2Client, transporter, bcrypt) {
           message: `Video and audio files are not supported. File: ${fileName}`
         });
       }
-      
+
       // Only allow image extensions
       if (!allowedExtensions.includes(ext)) {
         return res.status(400).json({
@@ -825,7 +826,7 @@ function setupRoutes(app, db, admin, r2Client, transporter, bcrypt) {
     try {
       const base64 = imageData.replace(/^data:image\/\w+;base64,/, "");
       const buffer = Buffer.from(base64, "base64");
-      
+
       // Check file size (limit to 10MB)
       if (buffer.length > 10 * 1024 * 1024) {
         return res.status(400).json({
@@ -833,7 +834,7 @@ function setupRoutes(app, db, admin, r2Client, transporter, bcrypt) {
           message: "File too large. Maximum size is 10MB."
         });
       }
-      
+
       const ext = fileName ? fileName.split(".").pop() : "jpg";
       const key = `${memoryId}/${Date.now()}.${ext}`;
 
@@ -850,15 +851,15 @@ function setupRoutes(app, db, admin, r2Client, transporter, bcrypt) {
           // 🔒 LOCKED - Use LOCKED R2 public URL
           const publicUrl = process.env.R2_PUBLIC_URL || "https://pub-5d6eb9dacf9146a2bd3bff425e11c1b2.r2.dev";
           const url = `${publicUrl}/${key}`;
-          
+
           console.log(`✅ R2 upload successful:`, {
             key: key,
             url: url,
             bucket: process.env.R2_BUCKET_NAME || "nfcchain"
           });
-          
-          return res.json({ 
-            success: true, 
+
+          return res.json({
+            success: true,
             url: url,
             fileName: key  // Return the R2 key for deletion
           });
@@ -867,64 +868,64 @@ function setupRoutes(app, db, admin, r2Client, transporter, bcrypt) {
           // For production environments (Firebase Functions), don't fall back to local storage
           if (process.env.FUNCTIONS_EMULATOR !== 'true' && !process.env.NODE_ENV?.includes('development')) {
             return res.status(500).json({
-              success: false, 
+              success: false,
               message: "Image upload failed - cloud storage unavailable"
             });
           }
           console.log("R2 upload failed, using local storage fallback");
         }
       }
-      
+
       // Local storage fallback (only for development)
       const fs = require('fs');
       const path = require('path');
-      
+
       const uploadsDir = path.join(__dirname, '../backend/uploads');
       if (!fs.existsSync(uploadsDir)) {
         fs.mkdirSync(uploadsDir, { recursive: true });
       }
-      
+
       const localFileName = `${memoryId}_${Date.now()}.${ext}`;
       const localFilePath = path.join(uploadsDir, localFileName);
-      
+
       fs.writeFileSync(localFilePath, buffer);
-      
+
       const localUrl = `http://localhost:3000/uploads/${localFileName}`;
-      return res.json({ 
-        success: true, 
+      return res.json({
+        success: true,
         url: localUrl,
         fileName: localFileName  // Return local filename for deletion
       });
-      
+
     } catch (err) {
       console.error(err);
-      return res.status(500).json({message: "Upload failed"});
+      return res.status(500).json({ message: "Upload failed" });
     }
   });
 
   // Delete image
   app.delete(["/api/delete-image", "/delete-image"], async (req, res) => {
     const { fileName, memoryId, imageUrl } = req.body;
-    
+
     console.log(`🗑️ Delete request received:`, { fileName, memoryId, imageUrl });
-    
+
     if (!fileName && !imageUrl) {
       return res.status(400).json({
         success: false,
         message: "fileName or imageUrl is required"
       });
     }
-    
+
     try {
       let keyToDelete = fileName;
-      
+
       // If no fileName provided, try to extract from imageUrl
       if (!keyToDelete && imageUrl) {
         console.log(`📝 Extracting key from imageUrl: ${imageUrl}`);
-        
+
         // Clean the URL and extract the key
         let cleanUrl = imageUrl.split('?')[0]; // Remove query parameters
-        
+
         // Extract the key from R2 URL or local URL
         if (cleanUrl.includes('pub-5d6eb9dacf9146a2bd3bff425e11c1b2.r2.dev/')) {
           keyToDelete = cleanUrl.split('pub-5d6eb9dacf9146a2bd3bff425e11c1b2.r2.dev/')[1];
@@ -948,9 +949,9 @@ function setupRoutes(app, db, admin, r2Client, transporter, bcrypt) {
           }
         }
       }
-      
+
       console.log(`🎯 Key to delete: "${keyToDelete}"`);
-      
+
       // Validate that we have a proper key
       if (!keyToDelete || keyToDelete.trim() === '') {
         console.error('❌ No valid key found for deletion');
@@ -960,25 +961,25 @@ function setupRoutes(app, db, admin, r2Client, transporter, bcrypt) {
           debug: { fileName, imageUrl, memoryId }
         });
       }
-      
+
       let deletedFromR2 = false;
       let deletionError = null;
-      
+
       // Try to delete from Cloudflare R2
       if (r2Client && DeleteObjectCommand) {
         try {
           console.log(`🗑️ Deleting from R2 bucket: ${process.env.R2_BUCKET_NAME || "nfcchain"}`);
           console.log(`🗑️ R2 key: "${keyToDelete}"`);
-          
+
           const deleteCommand = new DeleteObjectCommand({
             Bucket: process.env.R2_BUCKET_NAME || "nfcchain",
             Key: keyToDelete,
           });
-          
+
           const deleteResult = await r2Client.send(deleteCommand);
           deletedFromR2 = true;
           console.log(`✅ Successfully deleted from R2: ${keyToDelete}`, deleteResult);
-          
+
         } catch (r2Error) {
           deletionError = r2Error;
           console.error(`❌ R2 deletion failed for "${keyToDelete}":`, {
@@ -988,7 +989,7 @@ function setupRoutes(app, db, admin, r2Client, transporter, bcrypt) {
             key: keyToDelete,
             bucket: process.env.R2_BUCKET_NAME || "nfcchain"
           });
-          
+
           // If it's a "NoSuchKey" error, the file doesn't exist (might have been deleted already)
           if (r2Error.name === 'NoSuchKey' || r2Error.code === 'NoSuchKey') {
             console.log(`📝 File "${keyToDelete}" does not exist in R2 - may have been deleted already`);
@@ -999,21 +1000,21 @@ function setupRoutes(app, db, admin, r2Client, transporter, bcrypt) {
         console.warn('⚠️ R2 client not available for deletion');
         deletionError = 'R2 client not configured';
       }
-      
+
       // Try to delete from local storage as fallback
       let deletedFromLocal = false;
       if (keyToDelete && keyToDelete.includes('_')) {
         try {
           const fs = require('fs');
           const path = require('path');
-          
+
           // For local files, the key might be like "memoryId_timestamp.ext"
-          const localFileName = keyToDelete.includes('/') ? 
+          const localFileName = keyToDelete.includes('/') ?
             keyToDelete.split('/').pop() : keyToDelete;
-          
+
           const uploadsDir = path.join(__dirname, '../backend/uploads');
           const localFilePath = path.join(uploadsDir, localFileName);
-          
+
           if (fs.existsSync(localFilePath)) {
             fs.unlinkSync(localFilePath);
             deletedFromLocal = true;
@@ -1025,31 +1026,31 @@ function setupRoutes(app, db, admin, r2Client, transporter, bcrypt) {
           console.error('❌ Local deletion failed:', localError);
         }
       }
-      
+
       // Update Firestore to remove the image from the memory document
       let updatedFirestore = false;
       if (memoryId) {
         try {
           const docRef = db.collection("nfcChains").doc(memoryId);
           const doc = await docRef.get();
-          
+
           if (doc.exists) {
             const data = doc.data();
             const images = data.images || [];
-            
+
             // Find and remove the image by fileName or URL  
             const originalCount = images.length;
             const updatedImages = images.filter(img => {
               // Check multiple ways the image might be stored
               const matches = [
                 img.fileName === keyToDelete,
-                img.fileName === fileName, 
+                img.fileName === fileName,
                 img.fullImage === imageUrl,
                 img.thumbnail === imageUrl
               ];
               return !matches.some(match => match);
             });
-            
+
             if (updatedImages.length < originalCount) {
               await docRef.update({
                 images: updatedImages,
@@ -1068,10 +1069,10 @@ function setupRoutes(app, db, admin, r2Client, transporter, bcrypt) {
           console.error('❌ Firestore update failed:', firestoreError);
         }
       }
-      
+
       // Return success if we deleted from R2 or if the file didn't exist
       const success = deletedFromR2 || deletedFromLocal || updatedFirestore;
-      
+
       return res.json({
         success: success,
         message: success ? "Image deletion processed successfully" : "Image deletion failed",
@@ -1085,7 +1086,7 @@ function setupRoutes(app, db, admin, r2Client, transporter, bcrypt) {
           error: deletionError?.message
         }
       });
-      
+
     } catch (err) {
       console.error('❌ Delete image error:', err);
       return res.status(500).json({
@@ -1096,12 +1097,251 @@ function setupRoutes(app, db, admin, r2Client, transporter, bcrypt) {
     }
   });
 
+  // Upload video (premium only)
+  app.post(["/api/upload-video", "/upload-video"], async (req, res) => {
+    try {
+      console.log('\n📹 Video upload request received');
+      const { memoryId, videoData, fileName, isPremium } = req.body;
+
+      // Validate premium status
+      if (!isPremium) {
+        console.log('❌ Non-premium user attempted video upload');
+        return res.status(403).json({
+          success: false,
+          message: "Video upload is a premium feature only"
+        });
+      }
+
+      // Validate required fields
+      if (!memoryId || !videoData || !fileName) {
+        console.log('❌ Missing required fields');
+        return res.status(400).json({
+          success: false,
+          message: "Missing required fields (memoryId, videoData, fileName)"
+        });
+      }
+
+      // Validate file type (must be MP4)
+      if (!fileName.toLowerCase().endsWith('.mp4')) {
+        console.log('❌ Invalid file type:', fileName);
+        return res.status(400).json({
+          success: false,
+          message: "Only MP4 video files are allowed"
+        });
+      }
+
+      // Check if memory already has a video
+      const docRef = db.collection("nfcChains").doc(memoryId);
+      const doc = await docRef.get();
+
+      if (doc.exists) {
+        const data = doc.data();
+        if (data.videoUrl) {
+          console.log('❌ Memory already has a video');
+          return res.status(400).json({
+            success: false,
+            message: "This memory already has a video. Please delete the existing video first."
+          });
+        }
+      }
+
+      console.log(`📹 Processing video: ${fileName} for memory: ${memoryId}`);
+
+      // Decode base64 video data
+      const base64Data = videoData.replace(/^data:video\/\w+;base64,/, '');
+      const buffer = Buffer.from(base64Data, 'base64');
+
+      // Check file size (30MB limit)
+      const fileSizeInMB = buffer.length / (1024 * 1024);
+      if (fileSizeInMB > 30) {
+        console.log(`❌ Video too large: ${fileSizeInMB.toFixed(2)}MB`);
+        return res.status(400).json({
+          success: false,
+          message: `Video file is too large (${fileSizeInMB.toFixed(2)}MB). Maximum size is 30MB.`
+        });
+      }
+
+      console.log(`📹 Video size: ${fileSizeInMB.toFixed(2)}MB`);
+
+      // Generate unique key for R2 (store inside user's folder)
+      const timestamp = Date.now();
+      const sanitizedFileName = fileName.replace(/[^a-zA-Z0-9.-]/g, '_');
+      const key = `${memoryId}/videos/${memoryId}_${timestamp}_${sanitizedFileName}`;
+
+      console.log(`📹 Uploading to R2 with key: ${key}`);
+
+      let videoUrl;
+
+      // Upload to Cloudflare R2
+      if (r2Client) {
+        try {
+          const command = new PutObjectCommand({
+            Bucket: process.env.R2_BUCKET_NAME,
+            Key: key,
+            Body: buffer,
+            ContentType: 'video/mp4',
+          });
+
+          await r2Client.send(command);
+          
+          // Construct public URL
+          const publicUrl = process.env.R2_PUBLIC_URL || process.env.R2_ENDPOINT;
+          videoUrl = `${publicUrl}/${key}`;
+          
+          console.log(`✅ Video uploaded to R2: ${videoUrl}`);
+        } catch (r2Error) {
+          console.error('❌ R2 upload failed:', r2Error);
+          throw new Error(`R2 upload failed: ${r2Error.message}`);
+        }
+      } else {
+        console.log('⚠️ R2 client not configured, video upload failed');
+        return res.status(500).json({
+          success: false,
+          message: "Storage service not configured"
+        });
+      }
+
+      // Update Firestore with video URL
+      await docRef.update({
+        videoUrl: videoUrl,
+        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+      });
+
+      console.log(`✅ Video upload complete for memory: ${memoryId}`);
+
+      return res.json({
+        success: true,
+        message: "Video uploaded successfully",
+        videoUrl: videoUrl
+      });
+
+    } catch (err) {
+      console.error('❌ Video upload error:', err);
+      return res.status(500).json({
+        success: false,
+        message: "Video upload failed",
+        error: err.message
+      });
+    }
+  });
+
+  // Delete video (premium only)
+  app.delete(["/api/delete-video", "/delete-video"], async (req, res) => {
+    try {
+      console.log('\n🗑️ Video deletion request received');
+      const { memoryId, videoUrl, isPremium } = req.body;
+
+      // Validate premium status
+      if (!isPremium) {
+        console.log('❌ Non-premium user attempted video deletion');
+        return res.status(403).json({
+          success: false,
+          message: "Video deletion is a premium feature only"
+        });
+      }
+
+      // Validate required fields
+      if (!memoryId || !videoUrl) {
+        console.log('❌ Missing required fields');
+        return res.status(400).json({
+          success: false,
+          message: "Missing required fields (memoryId, videoUrl)"
+        });
+      }
+
+      console.log(`🗑️ Deleting video for memory: ${memoryId}`);
+      console.log(`🗑️ Video URL: ${videoUrl}`);
+
+      // Extract the R2 key from the URL
+      let keyToDelete = null;
+      try {
+        const url = new URL(videoUrl);
+        keyToDelete = url.pathname.substring(1); // Remove leading '/'
+        console.log(`🗑️ Extracted key: ${keyToDelete}`);
+      } catch (urlError) {
+        console.error('❌ Invalid URL format:', urlError);
+        return res.status(400).json({
+          success: false,
+          message: "Invalid video URL format"
+        });
+      }
+
+      // Delete from R2
+      let deletedFromR2 = false;
+      let deletionError = null;
+
+      if (r2Client && keyToDelete) {
+        try {
+          const command = new DeleteObjectCommand({
+            Bucket: process.env.R2_BUCKET_NAME,
+            Key: keyToDelete,
+          });
+
+          await r2Client.send(command);
+          deletedFromR2 = true;
+          console.log(`✅ Successfully deleted from R2: ${keyToDelete}`);
+        } catch (r2Error) {
+          console.error('❌ R2 deletion failed:', r2Error);
+          deletionError = r2Error;
+        }
+      } else {
+        console.log('⚠️ R2 client not configured or no key to delete');
+        deletionError = 'R2 client not configured';
+      }
+
+      // Update Firestore to remove the videoUrl
+      let updatedFirestore = false;
+      if (memoryId) {
+        try {
+          const docRef = db.collection("nfcChains").doc(memoryId);
+          const doc = await docRef.get();
+
+          if (doc.exists) {
+            await docRef.update({
+              videoUrl: admin.firestore.FieldValue.delete(),
+              updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+            });
+            updatedFirestore = true;
+            console.log(`✅ Removed videoUrl from Firestore for ${memoryId}`);
+          } else {
+            console.log(`⚠️ Memory document ${memoryId} not found in Firestore`);
+          }
+        } catch (firestoreError) {
+          console.error('❌ Firestore update failed:', firestoreError);
+        }
+      }
+
+      // Return success if we deleted from R2 or updated Firestore
+      const success = deletedFromR2 || updatedFirestore;
+
+      return res.json({
+        success: success,
+        message: success ? "Video deletion processed successfully" : "Video deletion failed",
+        details: {
+          deletedFromR2,
+          updatedFirestore,
+          key: keyToDelete,
+          originalVideoUrl: videoUrl,
+          error: deletionError?.message
+        }
+      });
+
+    } catch (err) {
+      console.error('❌ Delete video error:', err);
+      return res.status(500).json({
+        success: false,
+        message: "Video deletion failed",
+        error: err.message
+      });
+    }
+  });
+
   // Request reset
   app.post(["/api/memory/request-reset", "/memory/request-reset"], async (req, res) => {
-    const {memoryId, email} = req.body;
+    const { memoryId, email } = req.body;
 
     if (!memoryId || !email) {
-      return res.status(400).json({success: false});
+      return res.status(400).json({ success: false });
     }
 
     try {
@@ -1109,12 +1349,12 @@ function setupRoutes(app, db, admin, r2Client, transporter, bcrypt) {
       const doc = await ref.get();
 
       if (!doc.exists) {
-        return res.status(404).json({success: false});
+        return res.status(404).json({ success: false });
       }
 
       const data = doc.data();
       if (data.email !== email) {
-        return res.status(400).json({success: false});
+        return res.status(400).json({ success: false });
       }
 
       const code = generateVerificationCode();
@@ -1154,16 +1394,16 @@ function setupRoutes(app, db, admin, r2Client, transporter, bcrypt) {
         `,
       });
 
-      return res.json({success: true});
+      return res.json({ success: true });
     } catch (err) {
       console.error(err);
-      return res.status(500).json({success: false});
+      return res.status(500).json({ success: false });
     }
   });
 
   // Reset passcode
   app.post(["/api/memory/reset-passcode", "/memory/reset-passcode"], async (req, res) => {
-    const {memoryId, code, newPasscode} = req.body;
+    const { memoryId, code, newPasscode } = req.body;
 
     if (!memoryId || !code || !newPasscode) {
       return res.status(400).json({

@@ -173,7 +173,7 @@
 }
 
 .zoom-letter {
-    background: 
+    background:
         linear-gradient(90deg, rgba(250, 248, 245, 0) 0%, rgba(250, 248, 245, 0.3) 50%, rgba(250, 248, 245, 0) 100%),
         repeating-linear-gradient(0deg, #faf8f5 0px, #faf8f5 1px, transparent 1px, transparent 2px),
         linear-gradient(135deg, #fefdfb 0%, #f9f7f4 100%);
@@ -434,6 +434,7 @@
         gap: 1rem !important;
         padding: 1rem !important;
     }
+
     #letterEditModal .image-cancel-btn,
     #letterEditModal .image-save-btn {
         min-width: 0 !important;
@@ -724,7 +725,7 @@ header {
     background: linear-gradient(135deg, var(--surface-color), var(--background-color));
 
     backdrop-filter: blur(10px);
-    box-shadow: 
+    box-shadow:
         0 4px 20px rgba(0, 0, 0, 0.08),
         0 1px 3px rgba(0, 0, 0, 0.05);
     position: relative;
@@ -1076,6 +1077,7 @@ body.gallery-active main {
 
 /* Enhanced Mobile Color Scheme Responsiveness */
 @media (max-width: 768px) {
+
     /* Color scheme title styling on mobile */
     .theme-section h4 {
         font-size: 0.95rem;
@@ -1084,14 +1086,14 @@ body.gallery-active main {
         color: var(--text-color);
         font-weight: 600;
     }
-    
+
     /* Color palette panel header on mobile */
     .color-palette-panel h3 {
         font-size: 1.1rem;
         text-align: center;
         margin-bottom: 1.25rem;
     }
-    
+
     /* Theme modes buttons on mobile */
     .theme-modes {
         display: flex;
@@ -1099,26 +1101,26 @@ body.gallery-active main {
         justify-content: center;
         margin-bottom: 1.25rem;
     }
-    
+
     .theme-btn {
         padding: 0.5rem 1rem;
         font-size: 0.85rem;
         border-radius: 10px;
     }
-    
+
     /* Enhance color preset visual feedback on mobile */
     .color-preset {
         border-radius: 12px;
         transition: all 0.2s ease;
-        box-shadow: 
+        box-shadow:
             0 3px 12px rgba(0, 0, 0, 0.1),
             0 1px 6px rgba(0, 0, 0, 0.05);
     }
-    
+
     .color-preset:active {
         transform: scale(0.95);
     }
-    
+
     .color-preset.selected {
         transform: scale(1.08);
         box-shadow:
@@ -1136,14 +1138,14 @@ body.gallery-active main {
         grid-template-columns: repeat(4, 1fr);
         margin-bottom: 1rem;
     }
-    
+
     .color-preset {
         width: 42px;
         height: 42px;
         border-radius: 12px;
         border-width: 2px;
     }
-    
+
     .color-palette-panel {
         padding: 1rem;
         border-radius: 16px;
@@ -1154,21 +1156,21 @@ body.gallery-active main {
         transform: translateX(50%) translateY(20px) scale(0.9);
         min-width: unset;
     }
-    
+
     .color-palette-panel.active {
         transform: translateX(50%) translateY(0) scale(1);
     }
-    
+
     .color-palette-panel h3 {
         font-size: 1.1rem;
         margin-bottom: 1rem;
     }
-    
+
     .theme-section h4 {
         font-size: 0.9rem;
         margin-bottom: 0.75rem;
     }
-    
+
     .background-options {
         gap: 0.5rem;
     }
@@ -1186,23 +1188,23 @@ body.gallery-active main {
         max-width: 480px;
         max-height: calc(100vh - 2rem);
         padding: 0.75rem;
- }
-    
+    }
+
     .color-palette-panel.active {
         transform: translate(-50%, -50%) scale(1);
     }
-    
+
     .color-options {
         grid-template-columns: repeat(6, 1fr);
         gap: 0.4rem;
         padding: 0.4rem;
     }
-    
+
     .color-preset {
         width: 40px;
         height: 40px;
     }
-    
+
     .theme-section {
         margin-bottom: 0.75rem;
     }
@@ -1217,7 +1219,7 @@ body.gallery-active main {
             0 6px 20px rgba(0, 0, 0, 0.08),
             0 2px 8px rgba(0, 0, 0, 0.04);
     }
-    
+
     .color-preset:hover::before {
         opacity: 0;
     }
@@ -2011,7 +2013,8 @@ footer p {
 
     .image-modal-preview {
         order: -1 !important;
-        margin-bottom: 1.5rem !important; /* Increased margin for better spacing */
+        margin-bottom: 1.5rem !important;
+        /* Increased margin for better spacing */
         width: 100% !important;
         position: relative !important;
     }
@@ -2021,14 +2024,16 @@ footer p {
         border-radius: 12px !important;
         width: 100% !important;
         object-fit: cover !important;
-        margin-bottom: 1rem !important; /* Add margin to separate from content below */
+        margin-bottom: 1rem !important;
+        /* Add margin to separate from content below */
     }
 
     .image-overlay-info {
         top: 0.75rem;
         right: 0.75rem;
         gap: 0.5rem;
-        flex-wrap: wrap !important; /* Allow wrapping on very small screens */
+        flex-wrap: wrap !important;
+        /* Allow wrapping on very small screens */
     }
 
     .image-format-badge,
@@ -2036,7 +2041,8 @@ footer p {
         padding: 0.4rem 0.75rem;
         font-size: 0.75rem;
         border-radius: 8px;
-        margin-bottom: 0.25rem !important; /* Add spacing when wrapped */
+        margin-bottom: 0.25rem !important;
+        /* Add spacing when wrapped */
     }
 
     .image-modal-fields {
@@ -2098,9 +2104,12 @@ footer p {
         font-weight: 600 !important;
         border: 2px solid !important;
         border-radius: 12px !important;
-        min-height: 48px !important; /* Ensure touch-friendly height */
-        position: relative !important; /* Ensure proper positioning */
-        z-index: 100 !important; /* Ensure buttons are above other content */
+        min-height: 48px !important;
+        /* Ensure touch-friendly height */
+        position: relative !important;
+        /* Ensure proper positioning */
+        z-index: 100 !important;
+        /* Ensure buttons are above other content */
     }
 
     /* Ensure cancel button is always visible and accessible */
@@ -2138,21 +2147,25 @@ footer p {
 /* iPhone 13 and similar devices specific fixes */
 @media (max-width: 428px) and (-webkit-device-pixel-ratio: 3) {
     .image-modal-body {
-        padding-bottom: 2rem !important; /* Extra space for iPhone */
+        padding-bottom: 2rem !important;
+        /* Extra space for iPhone */
     }
-    
+
     .image-field-actions {
-        padding-bottom: 1rem !important; /* Ensure buttons don't get cut off */
+        padding-bottom: 1rem !important;
+        /* Ensure buttons don't get cut off */
         margin-bottom: 1rem !important;
     }
 
     .image-cancel-btn,
     .image-save-btn {
-        font-size: 1.1rem !important; /* Slightly larger for better touch */
+        font-size: 1.1rem !important;
+        /* Slightly larger for better touch */
         padding: 1.1rem 1.5rem !important;
-        min-height: 52px !important; /* Larger touch target */
+        min-height: 52px !important;
+        /* Larger touch target */
     }
-    
+
     /* Fix image overlay on iPhone 13 */
     .image-overlay-info {
         position: absolute !important;
@@ -2161,7 +2174,7 @@ footer p {
         flex-direction: column !important;
         align-items: flex-end !important;
     }
-    
+
     .image-format-badge,
     .image-size-info {
         margin-bottom: 0.5rem !important;
@@ -2195,7 +2208,8 @@ html {
     -webkit-backface-visibility: hidden;
     -moz-backface-visibility: hidden;
     -ms-backface-visibility: hidden;
-    transform: translateZ(0); /* Force hardware acceleration */
+    transform: translateZ(0);
+    /* Force hardware acceleration */
     -webkit-transform: translateZ(0);
     -moz-transform: translateZ(0);
     -ms-transform: translateZ(0);
@@ -2221,7 +2235,7 @@ html {
         -webkit-touch-callout: none;
         user-select: none;
     }
-    
+
     .swiper-slide {
         -webkit-transform: translate3d(0, 0, 0);
         transform: translate3d(0, 0, 0);
@@ -2234,7 +2248,7 @@ html {
         scrollbar-width: thin;
         scrollbar-color: var(--primary-color) var(--surface-color);
     }
-    
+
     .image-modal-body {
         scrollbar-width: thin;
     }
@@ -2380,12 +2394,12 @@ html[data-browser-optimization="opera-gx"] {
         max-height: 100vh !important;
         border-radius: 0 !important;
     }
-    
+
     .mobile-browser .image-modal-body {
         max-height: calc(100vh - 140px) !important;
         padding-bottom: env(safe-area-inset-bottom) !important;
     }
-    
+
     .mobile-browser .modal-footer {
         padding-bottom: calc(1.5rem + env(safe-area-inset-bottom)) !important;
     }
@@ -2412,8 +2426,8 @@ html[data-browser-optimization="opera-gx"] {
         gap: 1rem;
         padding: 0.5rem;
     }
-    
-    .image-grid > *,
+
+    .image-grid>*,
     .image-item {
         /* iOS-specific aspect ratio handling */
         width: 100%;
@@ -2425,7 +2439,7 @@ html[data-browser-optimization="opera-gx"] {
         /* Remove flexbox properties that cause issues on iOS */
         display: block !important;
     }
-    
+
     .image-grid img,
     .image-item img {
         position: absolute !important;
@@ -2444,8 +2458,8 @@ html[data-browser-optimization="opera-gx"] {
         gap: 0.75rem;
         padding: 0.5rem;
     }
-    
-    .image-grid > *,
+
+    .image-grid>*,
     .image-item {
         padding-bottom: 100%;
         border-radius: 8px;
@@ -2542,11 +2556,12 @@ html[data-browser-optimization="opera-gx"] {
 }
 
 /* Fix for iPhone - remove the problematic flexbox properties */
-.image-grid > * {
+.image-grid>* {
     /* iPhone-friendly properties */
     width: 100%;
     height: 0;
-    padding-bottom: 100%; /* Creates 1:1 aspect ratio */
+    padding-bottom: 100%;
+    /* Creates 1:1 aspect ratio */
     position: relative;
     border-radius: 10px;
     overflow: hidden;
@@ -2573,7 +2588,8 @@ html[data-browser-optimization="opera-gx"] {
     /* Remove aspect-ratio for iPhone compatibility */
     width: 100%;
     height: 0;
-    padding-bottom: 100%; /* Creates 1:1 aspect ratio the iPhone-friendly way */
+    padding-bottom: 100%;
+    /* Creates 1:1 aspect ratio the iPhone-friendly way */
 }
 
 .image-item img {
@@ -3077,7 +3093,8 @@ html[data-browser-optimization="opera-gx"] {
     gap: 1rem !important;
     justify-content: space-between !important;
     flex-wrap: wrap !important;
-    display: none !important; /* Hidden by default */
+    display: none !important;
+    /* Hidden by default */
 }
 
 /* Show only the active footer */
@@ -3217,8 +3234,13 @@ html[data-browser-optimization="opera-gx"] {
 
 /* Spin animation for loading states */
 @keyframes spin {
-    from { transform: rotate(0deg); }
-    to { transform: rotate(360deg); }
+    from {
+        transform: rotate(0deg);
+    }
+
+    to {
+        transform: rotate(360deg);
+    }
 }
 
 /* Background Theme Styles */
@@ -4429,5 +4451,127 @@ body[data-bg="animated"] .letter-zoom-section {
     .spotify-modal .spotify-btn {
         padding: 0.65rem 0.8rem;
         font-size: 0.75rem;
+    }
+}
+
+/* Video Upload Area */
+.video-upload-area {
+    margin: 1.5rem 0;
+}
+
+/* Video Section - Display at bottom of gallery (below slider) */
+#galleryVideoSection {
+    width: 100%;
+    max-width: 800px;
+    margin: 3rem auto 2rem;
+    padding: 0 1rem;
+    text-align: center;
+    display: none; /* Hidden by default, shown via JS for premium users */
+}
+
+#galleryVideoSection h3 {
+    color: var(--text-color, #222);
+    font-size: 1.3rem;
+    font-weight: 600;
+    margin-bottom: 1.5rem;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+#galleryVideoSection video,
+#currentVideoPreview {
+    width: 100%;
+    max-width: 100%;
+    max-height: 500px;
+    border-radius: 12px;
+    background: #000;
+    margin-bottom: 0.5rem;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+}
+
+/* Video Upload Area in Edit Panel */
+.video-upload-area {
+    margin-top: 2rem;
+    padding-top: 2rem;
+    border-top: 2px solid var(--border-color, #e0e0e0);
+}
+
+.video-upload-area .upload-zone {
+    text-align: center;
+    padding: 2rem;
+    background: var(--bg-secondary, #f9f9f9);
+    border-radius: 12px;
+    border: 2px dashed var(--primary-color, #6366f1);
+}
+
+.video-upload-area h4 {
+    color: var(--text-color, #222);
+    font-size: 1.1rem;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+}
+
+.video-upload-area p {
+    color: var(--text-secondary, #666);
+    font-size: 0.9rem;
+    margin-bottom: 1rem;
+}
+
+.video-upload-area .upload-btn {
+    background: var(--primary-color, #6366f1);
+    color: white;
+    padding: 0.75rem 2rem;
+    border: none;
+    border-radius: 8px;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.video-upload-area .upload-btn:hover {
+    background: var(--primary-dark, #4f46e5);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+}
+
+/* Current Video Area in Edit Panel */
+#currentVideoArea {
+    margin-top: 1.5rem;
+    padding: 1.5rem;
+    background: var(--bg-secondary, #f9f9f9);
+    border-radius: 12px;
+    text-align: center;
+}
+
+#currentVideoArea h4 {
+    color: var(--text-color, #222);
+    font-size: 1rem;
+    font-weight: 600;
+    margin-bottom: 1rem;
+}
+
+#currentVideoArea .image-cancel-btn {
+    display: block;
+    margin: 1rem auto 0;
+    width: auto;
+    min-width: 200px;
+}
+
+/* Mobile Responsive */
+@media (max-width: 768px) {
+    #galleryVideoSection {
+        max-width: 100%;
+        padding: 0 1rem;
+        margin: 2rem auto 1.5rem;
+    }
+
+    #galleryVideoSection video,
+    #currentVideoPreview {
+        max-height: 300px;
+    }
+
+    #galleryVideoSection h3 {
+        font-size: 1.1rem;
     }
 }
