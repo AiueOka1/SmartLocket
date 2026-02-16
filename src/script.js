@@ -2223,9 +2223,23 @@ function updateVideoSection() {
 
     const videoUrl = window.currentGalleryVideoUrl || null;
     if (isPremium && videoUrl) {
-        console.log('✅ Showing video section with URL:', videoUrl);
+        // 🔥 MOBILE CARRIER FIX - Use Cloudflare Worker relay for videos (same as images)
+        let relayVideoUrl = videoUrl;
+        
+        if (videoUrl.includes('pub-5d6eb9dacf9146a2bd3bff425e11c1b2.r2.dev')) {
+            // Extract the path after the R2 domain
+            const urlParts = videoUrl.split('pub-5d6eb9dacf9146a2bd3bff425e11c1b2.r2.dev/');
+            if (urlParts.length > 1) {
+                const videoPath = urlParts[1].split('?')[0]; // Remove any query params
+                // Use Cloudflare Worker relay - carrier sees YOUR domain, not R2
+                relayVideoUrl = `${ASSETS_RELAY_URL}/${videoPath}`;
+                console.log('🔥 Using relay URL for video:', relayVideoUrl);
+            }
+        }
+        
+        console.log('✅ Showing video section with URL:', relayVideoUrl);
         videoSection.style.display = 'block';
-        videoEl.src = videoUrl;
+        videoEl.src = relayVideoUrl;
         videoEl.style.display = 'block';
         videoEl.load(); // Force reload the video
     } else {
@@ -2300,8 +2314,19 @@ function updateCurrentVideoArea() {
     const video = document.getElementById('currentVideoPreview');
     if (!area || !video) return;
     if (window.currentGalleryVideoUrl) {
+        // 🔥 MOBILE CARRIER FIX - Use Cloudflare Worker relay for video preview
+        let relayVideoUrl = window.currentGalleryVideoUrl;
+        
+        if (relayVideoUrl.includes('pub-5d6eb9dacf9146a2bd3bff425e11c1b2.r2.dev')) {
+            const urlParts = relayVideoUrl.split('pub-5d6eb9dacf9146a2bd3bff425e11c1b2.r2.dev/');
+            if (urlParts.length > 1) {
+                const videoPath = urlParts[1].split('?')[0];
+                relayVideoUrl = `${ASSETS_RELAY_URL}/${videoPath}`;
+            }
+        }
+        
         area.style.display = '';
-        video.src = window.currentGalleryVideoUrl;
+        video.src = relayVideoUrl;
     } else {
         area.style.display = 'none';
         video.src = '';
